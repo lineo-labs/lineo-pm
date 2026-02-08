@@ -1,0 +1,168 @@
+import type { Project, Task, TaskStatus } from "./types";
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
+
+interface ProjectDto {
+  id: number;
+  name: string;
+  description: string | null;
+  start_date: string;
+  end_date: string;
+}
+
+interface TaskDto {
+  id: number;
+  project_id: number;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  start_date: string;
+  end_date: string;
+  dependencies: number[];
+  order_index: number;
+}
+
+const toProject = (dto: ProjectDto): Project => ({
+  id: dto.id,
+  name: dto.name,
+  description: dto.description ?? undefined,
+  startDate: dto.start_date,
+  endDate: dto.end_date,
+});
+
+const toTask = (dto: TaskDto): Task => ({
+  id: dto.id,
+  projectId: dto.project_id,
+  title: dto.title,
+  description: dto.description ?? undefined,
+  status: dto.status,
+  startDate: dto.start_date,
+  endDate: dto.end_date,
+  dependencies: dto.dependencies,
+  orderIndex: dto.order_index,
+});
+
+const handleResponse = async <T>(response: Response): Promise<T> => {
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `HTTP ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+};
+
+export const fetchProjects = async () => {
+  const response = await fetch(`${API_BASE}/projects`);
+  const data = await handleResponse<ProjectDto[]>(response);
+  return data.map(toProject);
+};
+
+export const createProject = async (payload: {
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+}) => {
+  const response = await fetch(`${API_BASE}/projects`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: payload.name,
+      description: payload.description,
+      start_date: payload.startDate,
+      end_date: payload.endDate,
+    }),
+  });
+  const data = await handleResponse<ProjectDto>(response);
+  return toProject(data);
+};
+
+export const fetchTasks = async (projectId: number) => {
+  const response = await fetch(`${API_BASE}/tasks?project_id=${projectId}`);
+  const data = await handleResponse<TaskDto[]>(response);
+  return data.map(toTask);
+};
+
+export const createTask = async (payload: {
+  projectId: number;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  startDate: string;
+  endDate: string;
+}) => {
+  const response = await fetch(`${API_BASE}/tasks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      project_id: payload.projectId,
+      title: payload.title,
+      description: payload.description,
+      status: payload.status,
+      start_date: payload.startDate,
+      end_date: payload.endDate,
+      dependencies: [],
+    }),
+  });
+  const data = await handleResponse<TaskDto>(response);
+  return toTask(data);
+};
+
+export const updateTask = async (
+  taskId: number,
+  payload: Partial<{
+    projectId: number;
+    title: string;
+    description?: string;
+    status: TaskStatus;
+    startDate: string;
+    endDate: string;
+    dependencies: number[];
+  }>
+) => {
+  const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      project_id: payload.projectId,
+      title: payload.title,
+      description: payload.description,
+      status: payload.status,
+      start_date: payload.startDate,
+      end_date: payload.endDate,
+      dependencies: payload.dependencies,
+    }),
+  });
+  const data = await handleResponse<TaskDto>(response);
+  return toTask(data);
+};
+
+export const updateProject = async (
+  projectId: number,
+  payload: {
+    name: string;
+    description?: string;
+    startDate: string;
+    endDate: string;
+  }
+) => {
+  const response = await fetch(`${API_BASE}/projects/${projectId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: payload.name,
+      description: payload.description,
+      start_date: payload.startDate,
+      end_date: payload.endDate,
+    }),
+  });
+  const data = await handleResponse<ProjectDto>(response);
+  return toProject(data);
+};

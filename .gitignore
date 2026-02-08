@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.swp
+*.swo
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Pytest cache
+.pytest_cache/
+
+# MySQL / SQLite / Postgres temporary files
+*.db
+*.sqlite3
+
+# VSCode / IDEs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Logs
+*.log
+
+# Frontend (React / Vite / CRA)
+node_modules/
+dist/
+build/
+.cache/
+.parcel-cache/
+.vite/
+.eslintcache
+coverage/
+
+# OS junk
+.DS_Store
+
+# Alembic / migrations (optional: keep migrations if you want)
+# alembic/versions/
+
+# Docker
+*.dockerignore

@@ -1,0 +1,42 @@
+@import "react-day-picker/dist/style.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.rdp-dark {
+  --rdp-accent-color: #6366f1;
+  --rdp-background-color: rgba(99, 102, 241, 0.2);
+  --rdp-outline: 2px solid rgba(99, 102, 241, 0.6);
+  --rdp-outline-selected: 2px solid rgba(99, 102, 241, 0.9);
+  color: #e2e8f0;
+}
+
+.rdp-dark .rdp-day {
+  color: #e2e8f0;
+}
+
+.rdp-dark .rdp-day_selected,
+.rdp-dark .rdp-day_range_start,
+.rdp-dark .rdp-day_range_end {
+  background-color: rgba(99, 102, 241, 0.6);
+  color: #0f172a;
+}
+
+.rdp-dark .rdp-day_range_middle {
+  background-color: rgba(99, 102, 241, 0.2);
+  color: #e2e8f0;
+}

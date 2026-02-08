@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: app
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: alembic>=1.17.2
+Requires-Dist: pydantic>=2.12.5
+Dynamic: license-file
+
+# novux-pm
+Next-generation Open Source Project Management tool powered by AI and designed for Enterprise velocity.

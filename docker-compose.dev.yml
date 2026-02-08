@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: novux
+      POSTGRES_PASSWORD: novux
+      POSTGRES_DB: novux
+    ports:
+      - "5432:5432"
+    volumes:
+      - novux_pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env-dev
+    environment:
+      PYTHONPATH: /app/src
+    working_dir: /app/src
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
+    command: >
+      bash -c "pip install -e /app/src && uvicorn backend_main:app --host 0.0.0.0 --port 8000 --reload"
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env-dev
+    environment:
+      PYTHONPATH: /app/src
+    working_dir: /app/src
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+      - redis
+    command: >
+      bash -c "pip install -e /app/src && celery -A backend.celery_app worker --loglevel=info"
+
+  ui:
+    image: node:20-alpine
+    working_dir: /app/frontend
+    volumes:
+      - .:/app
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_PROXY_TARGET: "http://backend:8000"
+    command: >
+      sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+
+volumes:
+  novux_pgdata:
