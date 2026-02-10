@@ -7,7 +7,8 @@ declare module "react-day-picker" {
   export interface DayPickerProps {
     mode?: "single" | "multiple" | "range";
     selected?: Date | Date[] | DateRange;
-    onSelect?: (range?: DateRange) => void;
+    onSelect?: (value?: Date | Date[] | DateRange) => void;
+    onDayClick?: (day: Date) => void;
     defaultMonth?: Date;
     weekStartsOn?: number;
     className?: string;

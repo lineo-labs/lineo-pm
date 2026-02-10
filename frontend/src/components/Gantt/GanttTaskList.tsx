@@ -16,12 +16,12 @@ export const GanttTaskList = ({
   return (
     <div className="rounded-l-xl border border-slate-900 bg-slate-950">
       <div
-        className="sticky top-0 z-10 flex items-center border-b border-slate-900 bg-slate-950 px-3 text-xs text-slate-500"
+        className="sticky top-0 z-10 flex items-center border-b border-slate-900 bg-slate-950 px-3 text-xs text-slate-500 box-border"
         style={{ height: headerHeight }}
       >
         Task
       </div>
-      <div style={{ paddingTop: headerHeight }}>
+      <div>
         {tasks.length === 0 && (
           <div className="flex items-center px-3 text-xs text-slate-500" style={{ height: rowHeight }}>
             Nessun task
@@ -30,7 +30,7 @@ export const GanttTaskList = ({
         {tasks.map((task) => (
           <div
             key={task.id}
-            className="flex items-center justify-between border-b border-slate-900/70 px-3 text-xs text-slate-200"
+            className="flex items-center justify-between border-b border-slate-900/70 px-3 text-xs text-slate-200 box-border"
             style={{ height: rowHeight }}
           >
             <span className="truncate">{task.title}</span>

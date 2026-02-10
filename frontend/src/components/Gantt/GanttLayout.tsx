@@ -86,8 +86,10 @@ export const GanttLayout = ({ tasks, onEditTask, onAdjustTaskDates }: GanttLayou
               rowCount={Math.max(tasks.length, 1)}
               rowHeight={ROW_HEIGHT}
               headerHeight={HEADER_HEIGHT}
+              scale={scale}
+              columnDates={scale === "day" ? columns : []}
             />
-            <div className="relative" style={{ paddingTop: HEADER_HEIGHT }}>
+            <div className="relative">
               {tasks.map((task, index) => (
                 <GanttRow
                   key={task.id}

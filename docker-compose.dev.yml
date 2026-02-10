@@ -33,6 +33,12 @@ services:
       - "8000:8000"
     command: >
       bash -c "pip install -e /app/src && uvicorn backend_main:app --host 0.0.0.0 --port 8000 --reload"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   celery:
     build:
@@ -58,6 +64,9 @@ services:
       - .:/app
     ports:
       - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
     environment:
       VITE_API_PROXY_TARGET: "http://backend:8000"
     command: >

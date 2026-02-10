@@ -16,6 +16,11 @@ app.add_middleware(
 app.include_router(api_router)
 
 
+@app.get("/health")
+def health_check():
+	return {"status": "ok"}
+
+
 @app.on_event("startup")
 def on_startup():
 	init_db()

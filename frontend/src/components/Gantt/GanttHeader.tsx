@@ -7,7 +7,7 @@ interface GanttHeaderProps {
 export const GanttHeader = ({ labels, columnWidth, height }: GanttHeaderProps) => {
   return (
     <div
-      className="sticky top-0 z-10 grid border-b border-slate-900 bg-slate-950"
+      className="sticky top-0 z-10 grid box-border border-b border-slate-900 bg-slate-950"
       style={{
         gridTemplateColumns: `repeat(${labels.length}, ${columnWidth}px)`,
         height,
