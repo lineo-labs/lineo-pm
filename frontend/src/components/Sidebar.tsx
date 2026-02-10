@@ -38,7 +38,7 @@ export const Sidebar = ({
   return (
     <div className="flex h-full flex-col gap-6">
       <div>
-        <h1 className="text-lg font-semibold tracking-tight">novux-pm</h1>
+        <h1 className="text-lg font-semibold tracking-tight">lines-pm</h1>
         <p className="mt-1 text-xs text-slate-400">AI-native, calm, fast.</p>
       </div>
 

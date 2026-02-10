@@ -9,7 +9,7 @@ export const CreateProjectButton = ({ onClick }: CreateProjectButtonProps) => {
       onClick={onClick}
       className="w-full rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/30 transition hover:bg-indigo-400"
     >
-      Crea progetto
+      Create project
     </button>
   );
 };

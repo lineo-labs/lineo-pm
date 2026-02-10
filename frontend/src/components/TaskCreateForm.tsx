@@ -46,33 +46,33 @@ export const TaskCreateForm = ({ projectId, onSubmit }: TaskCreateFormProps) => 
     >
       {!projectId && (
         <div className="rounded-md border border-slate-800 bg-slate-950/50 px-3 py-2 text-xs text-slate-500">
-          Seleziona un progetto per aggiungere task.
+          Select a project to add tasks.
         </div>
       )}
       <div>
-        <label className="text-xs text-slate-400">Titolo</label>
+        <label className="text-xs text-slate-400">Title</label>
         <input
           className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="Nuovo task"
+          placeholder="New task"
           disabled={!projectId}
         />
       </div>
       <div>
-        <label className="text-xs text-slate-400">Descrizione</label>
+        <label className="text-xs text-slate-400">Description</label>
         <textarea
           className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          placeholder="Breve descrizione"
+          placeholder="Short description"
           rows={2}
           disabled={!projectId}
         />
       </div>
       <div className="grid gap-3 sm:grid-cols-[1.5fr_1fr]">
         <DateRangePicker
-          label="Date"
+          label="Dates"
           startDate={startDate}
           endDate={endDate}
           onChange={(nextStart, nextEnd) => {
@@ -82,7 +82,7 @@ export const TaskCreateForm = ({ projectId, onSubmit }: TaskCreateFormProps) => 
           disabled={!projectId}
         />
         <div>
-          <label className="text-xs text-slate-400">Stato</label>
+          <label className="text-xs text-slate-400">Status</label>
           <select
             className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
             value={status}
@@ -90,8 +90,8 @@ export const TaskCreateForm = ({ projectId, onSubmit }: TaskCreateFormProps) => 
             disabled={!projectId}
           >
             <option value="todo">Todo</option>
-            <option value="in_progress">In corso</option>
-            <option value="done">Fatto</option>
+            <option value="in_progress">In progress</option>
+            <option value="done">Done</option>
           </select>
         </div>
       </div>
@@ -100,7 +100,7 @@ export const TaskCreateForm = ({ projectId, onSubmit }: TaskCreateFormProps) => 
         disabled={disabled}
         className="rounded-md bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-100 transition enabled:hover:bg-indigo-500 disabled:opacity-60"
       >
-        Aggiungi task
+        Add task
       </button>
     </form>
   );

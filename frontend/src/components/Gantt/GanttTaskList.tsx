@@ -24,7 +24,7 @@ export const GanttTaskList = ({
       <div>
         {tasks.length === 0 && (
           <div className="flex items-center px-3 text-xs text-slate-500" style={{ height: rowHeight }}>
-            Nessun task
+            No tasks
           </div>
         )}
         {tasks.map((task) => (
@@ -53,7 +53,7 @@ export const GanttTaskList = ({
                 onClick={() => onEditTask(task)}
                 className="rounded-md border border-slate-800 px-2 py-1 text-[10px] text-slate-300"
               >
-                Modifica
+                Edit
               </button>
             </div>
           </div>

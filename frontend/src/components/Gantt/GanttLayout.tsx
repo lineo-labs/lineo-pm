@@ -64,10 +64,10 @@ export const GanttLayout = ({ tasks, onEditTask, onAdjustTaskDates }: GanttLayou
         <div>
           <h2 className="text-lg font-semibold text-slate-100">Gantt</h2>
           <p className="text-xs text-slate-500">
-            Scala: {scale === "week" ? "Settimane" : "Giorni"}
+            Scale: {scale === "week" ? "Weeks" : "Days"}
           </p>
         </div>
-        <div className="text-xs text-slate-500">{tasks.length} task</div>
+        <div className="text-xs text-slate-500">{tasks.length} tasks</div>
       </div>
 
       <div className="grid grid-cols-[220px_1fr] gap-0">

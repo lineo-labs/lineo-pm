@@ -42,21 +42,21 @@ export const ProjectEditDialog = ({ project, open, onClose, onSave }: ProjectEdi
       <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-2xl">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-100">Modifica progetto</h3>
-            <p className="text-xs text-slate-500">Aggiorna dettagli e date.</p>
+            <h3 className="text-lg font-semibold text-slate-100">Edit project</h3>
+            <p className="text-xs text-slate-500">Update details and dates.</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="rounded-md border border-slate-800 px-2 py-1 text-xs text-slate-300"
           >
-            Chiudi
+            Close
           </button>
         </div>
 
         <div className="mt-4 flex flex-col gap-3">
           <div>
-            <label className="text-xs text-slate-400">Nome</label>
+            <label className="text-xs text-slate-400">Name</label>
             <input
               className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
               value={name}
@@ -64,7 +64,7 @@ export const ProjectEditDialog = ({ project, open, onClose, onSave }: ProjectEdi
             />
           </div>
           <div>
-            <label className="text-xs text-slate-400">Descrizione</label>
+            <label className="text-xs text-slate-400">Description</label>
             <textarea
               className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
               value={description}
@@ -73,7 +73,7 @@ export const ProjectEditDialog = ({ project, open, onClose, onSave }: ProjectEdi
             />
           </div>
           <DateRangePicker
-            label="Date progetto"
+            label="Project dates"
             startDate={startDate}
             endDate={endDate}
             onChange={(nextStart, nextEnd) => {
@@ -89,7 +89,7 @@ export const ProjectEditDialog = ({ project, open, onClose, onSave }: ProjectEdi
             onClick={onClose}
             className="rounded-md border border-slate-800 px-3 py-2 text-xs font-semibold text-slate-300"
           >
-            Annulla
+            Cancel
           </button>
           <button
             type="button"
@@ -104,7 +104,7 @@ export const ProjectEditDialog = ({ project, open, onClose, onSave }: ProjectEdi
             }
             className="rounded-md bg-indigo-500 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
           >
-            Salva
+            Save
           </button>
         </div>
       </div>

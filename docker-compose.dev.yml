@@ -2,13 +2,13 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: novux
-      POSTGRES_PASSWORD: novux
-      POSTGRES_DB: novux
+      POSTGRES_USER: lines
+      POSTGRES_PASSWORD: lines
+      POSTGRES_DB: lines
     ports:
       - "5432:5432"
     volumes:
-      - novux_pgdata:/var/lib/postgresql/data
+      - lines_pgdata:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
@@ -73,4 +73,4 @@ services:
       sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
 
 volumes:
-  novux_pgdata:
+  lines_pgdata:

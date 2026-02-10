@@ -5,7 +5,7 @@ from backend.db.database import SessionLocal, init_db
 from backend.routers import api_router
 from backend.seed import ensure_default_project, ensure_sample_tasks
 
-app = FastAPI(title="Novux PM Backend")
+app = FastAPI(title="Lines PM Backend")
 app.add_middleware(
 	CORSMiddleware,
 	allow_origins=["*"],

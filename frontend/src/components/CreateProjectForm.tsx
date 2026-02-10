@@ -38,26 +38,26 @@ export const CreateProjectForm = ({ onSubmit }: CreateProjectFormProps) => {
       }}
     >
       <div>
-        <label className="text-xs text-slate-400">Nome</label>
+        <label className="text-xs text-slate-400">Name</label>
         <input
           className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="Nuovo progetto"
+          placeholder="New project"
         />
       </div>
       <div>
-        <label className="text-xs text-slate-400">Descrizione</label>
+        <label className="text-xs text-slate-400">Description</label>
         <textarea
           className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          placeholder="Breve descrizione"
+          placeholder="Short description"
           rows={2}
         />
       </div>
       <DateRangePicker
-        label="Date"
+        label="Dates"
         startDate={startDate}
         endDate={endDate}
         onChange={(nextStart, nextEnd) => {
@@ -69,7 +69,7 @@ export const CreateProjectForm = ({ onSubmit }: CreateProjectFormProps) => {
         type="submit"
         className="rounded-md bg-indigo-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-400"
       >
-        Salva progetto
+        Save project
       </button>
     </form>
   );

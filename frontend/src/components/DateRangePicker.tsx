@@ -69,7 +69,7 @@ export const DateRangePicker = ({
         <span>
           {startDate} → {endDate}
         </span>
-        <span className="text-xs text-slate-500">Seleziona</span>
+        <span className="text-xs text-slate-500">Select</span>
       </button>
       {open && (
         <div className="absolute z-30 mt-2 w-[320px] rounded-xl border border-slate-800 bg-slate-950 p-3 shadow-xl">
@@ -82,7 +82,7 @@ export const DateRangePicker = ({
             className="rdp-dark"
           />
           <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-            <span>Seleziona inizio e fine, poi conferma.</span>
+            <span>Select start and end, then confirm.</span>
             <div className="flex items-center gap-2">
               <button
                 type="button"

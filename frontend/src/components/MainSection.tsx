@@ -59,7 +59,7 @@ export const MainSection = ({
       )}
       {loading && (
         <div className="rounded-xl border border-slate-900 bg-slate-950/60 px-4 py-3 text-sm text-slate-400">
-          Caricamento dati...
+          Loading data...
         </div>
       )}
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">

@@ -31,7 +31,7 @@ export const ProjectSelector = ({
   return (
     <div className="relative">
       <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-        Progetto attivo
+        Active project
       </label>
       <button
         type="button"
@@ -39,7 +39,7 @@ export const ProjectSelector = ({
         className="mt-2 w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-slate-700"
       >
         <div className="flex items-center justify-between">
-          <span>{selectedProject?.name ?? "Seleziona progetto"}</span>
+          <span>{selectedProject?.name ?? "Select project"}</span>
           <span className="text-slate-500">▾</span>
         </div>
         {selectedProject?.description && (
@@ -53,7 +53,7 @@ export const ProjectSelector = ({
         <div className="absolute left-0 right-0 z-20 mt-2 rounded-lg border border-slate-800 bg-slate-950 p-2 shadow-xl shadow-slate-950/60">
           <input
             type="text"
-            placeholder="Ricerca rapida..."
+            placeholder="Quick search..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             className="w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none"
@@ -80,7 +80,7 @@ export const ProjectSelector = ({
             ))}
             {filteredProjects.length === 0 && (
               <li className="px-3 py-2 text-xs text-slate-500">
-                Nessun progetto trovato.
+                No projects found.
               </li>
             )}
           </ul>

@@ -12,7 +12,7 @@ def ensure_default_project(db: Session) -> Project:
         return project
 
     project = Project(
-        name="Novux PM",
+        name="lines-pm",
         description="Default project for v0.1",
         start_date=date.today(),
         end_date=date.today(),

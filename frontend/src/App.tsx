@@ -38,7 +38,7 @@ export const App = () => {
         if (!active) {
           return;
         }
-        setError(err instanceof Error ? err.message : "Errore API");
+        setError(err instanceof Error ? err.message : "API error");
       })
       .finally(() => {
         if (active) {
@@ -68,7 +68,7 @@ export const App = () => {
         if (!active) {
           return;
         }
-        setError(err instanceof Error ? err.message : "Errore API");
+        setError(err instanceof Error ? err.message : "API error");
       });
 
     return () => {
@@ -96,7 +96,7 @@ export const App = () => {
       setSelectedProjectId(project.id);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore creazione progetto");
+      setError(err instanceof Error ? err.message : "Project creation error");
     }
   };
 
@@ -118,7 +118,7 @@ export const App = () => {
       setTasks((prev) => [...prev, task]);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore creazione task");
+      setError(err instanceof Error ? err.message : "Task creation error");
     }
   };
 
@@ -142,7 +142,7 @@ export const App = () => {
       setError(null);
     } catch (err) {
       setTasks(previous);
-      setError(err instanceof Error ? err.message : "Errore aggiornamento task");
+      setError(err instanceof Error ? err.message : "Task update error");
     }
   };
 
@@ -193,7 +193,7 @@ export const App = () => {
       setError(null);
     } catch (err) {
       setTasks(previous);
-      setError(err instanceof Error ? err.message : "Errore eliminazione task");
+      setError(err instanceof Error ? err.message : "Task deletion error");
     }
   };
 
@@ -214,7 +214,7 @@ export const App = () => {
       setError(null);
     } catch (err) {
       setProjects(previous);
-      setError(err instanceof Error ? err.message : "Errore aggiornamento progetto");
+      setError(err instanceof Error ? err.message : "Project update error");
     }
   };
 

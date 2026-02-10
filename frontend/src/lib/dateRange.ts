@@ -21,7 +21,7 @@ export const startOfWeek = (date: Date) => {
 export const endOfWeek = (date: Date) => addDays(startOfWeek(date), 6);
 
 export const formatDayLabel = (date: Date) =>
-  date.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+  date.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
 
 export const formatWeekLabel = (date: Date) => {
   const start = startOfWeek(date);

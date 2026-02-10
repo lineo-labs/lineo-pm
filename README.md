@@ -1,11 +1,11 @@
-# Chrona
+# lines-pm
 
-**Chrona** is a fast, timeline-first, open-source project management tool.
+**lines-pm** is a fast, timeline-first, open-source project management tool.
 
 It focuses on **project planning through an interactive Gantt view**, with a simple and extensible architecture.
 AI features are **optional** and can be added later without affecting the core system.
 
-Chrona is **fully usable without AI**.
+lines-pm is **fully usable without AI**.
 
 ---
 
@@ -33,7 +33,7 @@ Chrona is **fully usable without AI**.
 * **AI optional and non-intrusive**
 
 AI, RAG, and automation are **enhancements, not requirements**.
-Even without AI, Chrona remains fully functional.
+Even without AI, lines-pm remains fully functional.
 
 ---
 
@@ -59,7 +59,7 @@ Even without AI, Chrona remains fully functional.
 
 ## Data Model (v0.1)
 
-Currently, Chrona uses two main entities:
+Currently, lines-pm uses two main entities:
 
 * **Project**
 * **Task**

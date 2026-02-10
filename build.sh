@@ -1,7 +1,7 @@
 #!/bin/bash
 
-CONTAINER_NAME="novux-pm-dev"
-IMAGE_NAME="novux-pm-dev-image"
+CONTAINER_NAME="lines-pm-dev"
+IMAGE_NAME="lines-pm-dev-image"
 
 
 if [ "$1" == "shell" ]; then
@@ -24,5 +24,5 @@ if [ "$1" == "shell" ]; then
 fi
 
 echo "👉 Building production image…"
-docker build -t novux-pm .
+docker build -t lines-pm .
 echo "✔ Build complete"

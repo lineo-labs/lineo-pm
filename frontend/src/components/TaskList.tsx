@@ -8,8 +8,8 @@ interface TaskListProps {
 
 const statusLabel: Record<TaskStatus, string> = {
   todo: "Todo",
-  in_progress: "In corso",
-  done: "Fatto",
+  in_progress: "In progress",
+  done: "Done",
 };
 
 const statusColor: Record<TaskStatus, string> = {
@@ -20,7 +20,7 @@ const statusColor: Record<TaskStatus, string> = {
 
 export const TaskList = ({ tasks, onEditTask, variant = "default" }: TaskListProps) => {
   if (tasks.length === 0) {
-    return <p className="mt-4 text-sm text-slate-500">Nessun task.</p>;
+    return <p className="mt-4 text-sm text-slate-500">No tasks.</p>;
   }
 
   const itemClass =
@@ -63,7 +63,7 @@ export const TaskList = ({ tasks, onEditTask, variant = "default" }: TaskListPro
                 onClick={() => onEditTask(task)}
                 className="rounded-md border border-slate-800 px-2 py-1 text-[10px] text-slate-300"
               >
-                Modifica
+                Edit
               </button>
             </div>
           </div>
