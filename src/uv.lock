@@ -250,7 +250,7 @@ wheels = [
 ]
 
 [[package]]
-name = "novux"
+name = "lines-pm"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
