@@ -24,6 +24,7 @@ interface MainSectionProps {
     startDate: string;
     endDate: string;
   }) => Promise<void> | void;
+  onDeleteTask: (taskId: number) => Promise<void> | void;
   onAdjustTaskDates: (taskId: number, mode: "start" | "end", deltaDays: number) => Promise<void> | void;
   onUpdateProject: (projectId: number, payload: {
     name: string;
@@ -40,6 +41,7 @@ export const MainSection = ({
   tasks,
   onCreateTask,
   onUpdateTask,
+  onDeleteTask,
   onAdjustTaskDates,
   onUpdateProject,
   loading,
@@ -82,6 +84,10 @@ export const MainSection = ({
         onClose={() => setEditingTask(null)}
         onSave={(taskId, payload) => {
           onUpdateTask(taskId, payload);
+          setEditingTask(null);
+        }}
+        onDelete={async (taskId) => {
+          await onDeleteTask(taskId);
           setEditingTask(null);
         }}
       />

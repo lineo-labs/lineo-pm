@@ -70,28 +70,30 @@ export const TaskCreateForm = ({ projectId, onSubmit }: TaskCreateFormProps) => 
           disabled={!projectId}
         />
       </div>
-      <DateRangePicker
-        label="Date"
-        startDate={startDate}
-        endDate={endDate}
-        onChange={(nextStart, nextEnd) => {
-          setStartDate(nextStart);
-          setEndDate(nextEnd);
-        }}
-        disabled={!projectId}
-      />
-      <div>
-        <label className="text-xs text-slate-400">Stato</label>
-        <select
-          className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-          value={status}
-          onChange={(event) => setStatus(event.target.value as TaskStatus)}
+      <div className="grid gap-3 sm:grid-cols-[1.5fr_1fr]">
+        <DateRangePicker
+          label="Date"
+          startDate={startDate}
+          endDate={endDate}
+          onChange={(nextStart, nextEnd) => {
+            setStartDate(nextStart);
+            setEndDate(nextEnd);
+          }}
           disabled={!projectId}
-        >
-          <option value="todo">Todo</option>
-          <option value="in_progress">In corso</option>
-          <option value="done">Fatto</option>
-        </select>
+        />
+        <div>
+          <label className="text-xs text-slate-400">Stato</label>
+          <select
+            className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+            value={status}
+            onChange={(event) => setStatus(event.target.value as TaskStatus)}
+            disabled={!projectId}
+          >
+            <option value="todo">Todo</option>
+            <option value="in_progress">In corso</option>
+            <option value="done">Fatto</option>
+          </select>
+        </div>
       </div>
       <button
         type="submit"

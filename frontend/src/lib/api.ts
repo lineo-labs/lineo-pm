@@ -50,6 +50,13 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
   return response.json() as Promise<T>;
 };
 
+const handleVoidResponse = async (response: Response): Promise<void> => {
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `HTTP ${response.status}`);
+  }
+};
+
 export const fetchProjects = async () => {
   const response = await fetch(`${API_BASE}/projects`);
   const data = await handleResponse<ProjectDto[]>(response);
@@ -140,6 +147,13 @@ export const updateTask = async (
   });
   const data = await handleResponse<TaskDto>(response);
   return toTask(data);
+};
+
+export const deleteTask = async (taskId: number) => {
+  const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+    method: "DELETE",
+  });
+  await handleVoidResponse(response);
 };
 
 export const updateProject = async (

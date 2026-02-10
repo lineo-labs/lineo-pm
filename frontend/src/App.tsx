@@ -6,6 +6,7 @@ import { Sidebar } from "./components/Sidebar";
 import {
   createProject,
   createTask,
+  deleteTask,
   fetchProjects,
   fetchTasks,
   updateProject,
@@ -184,6 +185,18 @@ export const App = () => {
     });
   };
 
+  const handleDeleteTask = async (taskId: number) => {
+    const previous = tasks;
+    setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    try {
+      await deleteTask(taskId);
+      setError(null);
+    } catch (err) {
+      setTasks(previous);
+      setError(err instanceof Error ? err.message : "Errore eliminazione task");
+    }
+  };
+
   const handleUpdateProject = async (
     projectId: number,
     payload: {
@@ -221,6 +234,7 @@ export const App = () => {
           tasks={sortedTasks}
           onCreateTask={handleCreateTask}
           onUpdateTask={handleUpdateTask}
+          onDeleteTask={handleDeleteTask}
           onAdjustTaskDates={handleAdjustTaskDates}
           onUpdateProject={handleUpdateProject}
           loading={isLoading}
