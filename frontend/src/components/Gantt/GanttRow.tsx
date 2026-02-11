@@ -16,6 +16,7 @@ interface GanttRowProps {
   columnWidth: number;
   scale: DateScale;
   onAdjustTaskDates: (taskId: number, mode: "start" | "end", deltaDays: number) => void;
+  onMoveTaskDates: (taskId: number, deltaDays: number) => void;
   onEditTask: (task: Task) => void;
   onRowDragStart: (taskId: number, event: PointerEvent<Element>) => void;
   isRowDragging: boolean;
@@ -29,6 +30,7 @@ export const GanttRow = ({
   columnWidth,
   scale,
   onAdjustTaskDates,
+  onMoveTaskDates,
   onEditTask,
   onRowDragStart,
   isRowDragging,
@@ -37,7 +39,7 @@ export const GanttRow = ({
   const [dragWidthDelta, setDragWidthDelta] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startXRef = useRef(0);
-  const modeRef = useRef<"start" | "end" | null>(null);
+  const modeRef = useRef<"start" | "end" | "move" | null>(null);
   const pointerIdRef = useRef<number | null>(null);
 
   const applyDelta = (delta: number) => {
@@ -47,6 +49,9 @@ export const GanttRow = ({
     } else if (modeRef.current === "end") {
       setDragOffset(0);
       setDragWidthDelta(delta);
+    } else if (modeRef.current === "move") {
+      setDragOffset(delta);
+      setDragWidthDelta(0);
     }
   };
 
@@ -69,17 +74,39 @@ export const GanttRow = ({
     modeRef.current = null;
     pointerIdRef.current = null;
     if (shouldCommit && deltaDays !== 0 && mode) {
-      onAdjustTaskDates(task.id, mode, deltaDays);
+      if (mode === "move") {
+        onMoveTaskDates(task.id, deltaDays);
+      } else {
+        onAdjustTaskDates(task.id, mode, deltaDays);
+      }
     }
   };
 
   const handlePointerDown = (mode: "start" | "end") => (event: PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.stopPropagation();
     modeRef.current = mode;
     startXRef.current = event.clientX;
     pointerIdRef.current = event.pointerId;
     setDragging(true);
     event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleMovePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    modeRef.current = "move";
+    startXRef.current = event.clientX;
+    pointerIdRef.current = event.pointerId;
+    setDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleRowPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    onRowDragStart(task.id, event);
   };
 
   const handlePointerMoveLocal = (event: PointerEvent<HTMLDivElement>) => {
@@ -140,7 +167,7 @@ export const GanttRow = ({
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerCancel);
     };
-  }, [dragging, columnWidth, scale, onAdjustTaskDates, task.id]);
+  }, [dragging, columnWidth, scale, onAdjustTaskDates, onMoveTaskDates, task.id]);
 
   const minWidth = columnWidth;
   let visualOffset = position.offset + dragOffset;
@@ -153,19 +180,19 @@ export const GanttRow = ({
   }
 
   return (
-    <div className="relative" style={{ height: rowHeight }}>
+    <div className="relative" style={{ height: rowHeight }} onPointerDown={handleRowPointerDown}>
       <GanttBar
         title={task.title}
         offset={visualOffset}
         width={visualWidth}
         isDragging={dragging}
         isRowDragging={isRowDragging}
+        onBarPointerDown={handleMovePointerDown}
         onPointerMove={handlePointerMoveLocal}
         onPointerUp={handlePointerUpLocal}
         onPointerCancel={handlePointerCancelLocal}
         onResizeStartPointerDown={handlePointerDown("start")}
         onResizeEndPointerDown={handlePointerDown("end")}
-        onRowPointerDown={(event) => onRowDragStart(task.id, event)}
         onEdit={() => onEditTask(task)}
       />
     </div>

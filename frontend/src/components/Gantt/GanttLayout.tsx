@@ -25,6 +25,7 @@ interface GanttLayoutProps {
   tasks: Task[];
   onEditTask: (task: Task) => void;
   onAdjustTaskDates: (taskId: number, mode: "start" | "end", deltaDays: number) => void;
+  onMoveTaskDates: (taskId: number, deltaDays: number) => void;
   onReorderTasks: (orderedIds: number[]) => void;
 }
 
@@ -38,6 +39,7 @@ export const GanttLayout = ({
   tasks,
   onEditTask,
   onAdjustTaskDates,
+  onMoveTaskDates,
   onReorderTasks,
 }: GanttLayoutProps) => {
   const timelineRef = useRef<HTMLDivElement | null>(null);
@@ -232,9 +234,6 @@ export const GanttLayout = ({
           rowHeight={ROW_HEIGHT}
           onEditTask={onEditTask}
           headerHeight={HEADER_HEIGHT}
-          draggingTaskId={draggingTaskId}
-          dropIndex={dropIndex}
-          onRowDragStart={handleRowDragStart}
         />
         <div
           ref={timelineRef}
@@ -268,6 +267,7 @@ export const GanttLayout = ({
                   columnWidth={columnWidth}
                   scale={scale}
                   onAdjustTaskDates={onAdjustTaskDates}
+                  onMoveTaskDates={onMoveTaskDates}
                   onEditTask={onEditTask}
                   onRowDragStart={handleRowDragStart}
                   isRowDragging={draggingTaskId === task.id}

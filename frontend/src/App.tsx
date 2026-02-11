@@ -186,6 +186,28 @@ export const App = () => {
     });
   };
 
+  const handleMoveTaskDates = async (taskId: number, deltaDays: number) => {
+    if (deltaDays === 0) {
+      return;
+    }
+    const target = tasks.find((task) => task.id === taskId);
+    if (!target) {
+      return;
+    }
+    const currentStart = parseISODate(target.startDate);
+    const currentEnd = parseISODate(target.endDate);
+    const nextStart = addDays(currentStart, deltaDays);
+    const nextEnd = addDays(currentEnd, deltaDays);
+
+    await handleUpdateTask(taskId, {
+      title: target.title,
+      description: target.description,
+      status: target.status,
+      startDate: toISODate(nextStart),
+      endDate: toISODate(nextEnd),
+    });
+  };
+
   const handleDeleteTask = async (taskId: number) => {
     const previous = tasks;
     setTasks((prev) => prev.filter((task) => task.id !== taskId));
@@ -268,6 +290,7 @@ export const App = () => {
           onUpdateTask={handleUpdateTask}
           onDeleteTask={handleDeleteTask}
           onAdjustTaskDates={handleAdjustTaskDates}
+          onMoveTaskDates={handleMoveTaskDates}
           onReorderTasks={handleReorderTasks}
           onUpdateProject={handleUpdateProject}
           loading={isLoading}

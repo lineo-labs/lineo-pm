@@ -6,12 +6,12 @@ interface GanttBarProps {
   width: number;
   isDragging: boolean;
   isRowDragging: boolean;
+  onBarPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
   onPointerMove: (event: PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (event: PointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (event: PointerEvent<HTMLDivElement>) => void;
   onResizeStartPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
   onResizeEndPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
-  onRowPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
   onEdit: () => void;
 }
 
@@ -21,12 +21,12 @@ export const GanttBar = ({
   width,
   isDragging,
   isRowDragging,
+  onBarPointerDown,
   onPointerMove,
   onPointerUp,
   onPointerCancel,
   onResizeStartPointerDown,
   onResizeEndPointerDown,
-  onRowPointerDown,
   onEdit,
 }: GanttBarProps) => {
   return (
@@ -39,7 +39,7 @@ export const GanttBar = ({
         width,
         transition: isDragging ? "none" : "left 150ms ease",
       }}
-      onPointerDown={onRowPointerDown}
+      onPointerDown={onBarPointerDown}
     >
       <div
         className="h-4 w-2 cursor-ew-resize rounded-full bg-white/60"

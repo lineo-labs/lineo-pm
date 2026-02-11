@@ -1,5 +1,3 @@
-import type { PointerEvent } from "react";
-
 import type { Task } from "../../lib/types";
 
 interface GanttTaskListProps {
@@ -7,9 +5,6 @@ interface GanttTaskListProps {
   rowHeight: number;
   onEditTask: (task: Task) => void;
   headerHeight: number;
-  draggingTaskId: number | null;
-  dropIndex: number | null;
-  onRowDragStart: (taskId: number, event: PointerEvent<Element>) => void;
 }
 
 export const GanttTaskList = ({
@@ -17,9 +12,6 @@ export const GanttTaskList = ({
   rowHeight,
   onEditTask,
   headerHeight,
-  draggingTaskId,
-  dropIndex,
-  onRowDragStart,
 }: GanttTaskListProps) => {
   return (
     <div className="rounded-l-xl border border-slate-900 bg-slate-950">
@@ -29,32 +21,19 @@ export const GanttTaskList = ({
       >
         Task
       </div>
-      <div className="relative">
+      <div>
         {tasks.length === 0 && (
           <div className="flex items-center px-3 text-xs text-slate-500" style={{ height: rowHeight }}>
             No tasks
           </div>
         )}
-        {tasks.map((task, index) => (
+        {tasks.map((task) => (
           <div
             key={task.id}
-            className={`flex items-center justify-between border-b border-slate-900/70 px-3 text-xs text-slate-200 box-border ${
-              dropIndex === index ? "border-t border-sky-400/80" : ""
-            } ${draggingTaskId === task.id ? "bg-slate-900/50" : ""}`}
+            className="flex items-center justify-between border-b border-slate-900/70 px-3 text-xs text-slate-200 box-border"
             style={{ height: rowHeight }}
           >
-            <div className="flex min-w-0 items-center gap-2">
-              <button
-                type="button"
-                className={`touch-none rounded-md border border-slate-800 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-300 ${
-                  draggingTaskId === task.id ? "cursor-grabbing" : "cursor-grab"
-                }`}
-                onPointerDown={(event) => onRowDragStart(task.id, event)}
-              >
-                Drag
-              </button>
-              <span className="truncate">{task.title}</span>
-            </div>
+            <span className="truncate">{task.title}</span>
             <div className="flex items-center gap-1">
               {task.description && (
                 <div className="relative group">
