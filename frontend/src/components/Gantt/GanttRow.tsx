@@ -17,6 +17,8 @@ interface GanttRowProps {
   scale: DateScale;
   onAdjustTaskDates: (taskId: number, mode: "start" | "end", deltaDays: number) => void;
   onEditTask: (task: Task) => void;
+  onRowDragStart: (taskId: number, event: PointerEvent<Element>) => void;
+  isRowDragging: boolean;
 }
 
 export const GanttRow = ({
@@ -28,6 +30,8 @@ export const GanttRow = ({
   scale,
   onAdjustTaskDates,
   onEditTask,
+  onRowDragStart,
+  isRowDragging,
 }: GanttRowProps) => {
   const [dragOffset, setDragOffset] = useState(0);
   const [dragWidthDelta, setDragWidthDelta] = useState(0);
@@ -155,11 +159,13 @@ export const GanttRow = ({
         offset={visualOffset}
         width={visualWidth}
         isDragging={dragging}
+        isRowDragging={isRowDragging}
         onPointerMove={handlePointerMoveLocal}
         onPointerUp={handlePointerUpLocal}
         onPointerCancel={handlePointerCancelLocal}
         onResizeStartPointerDown={handlePointerDown("start")}
         onResizeEndPointerDown={handlePointerDown("end")}
+        onRowPointerDown={(event) => onRowDragStart(task.id, event)}
         onEdit={() => onEditTask(task)}
       />
     </div>

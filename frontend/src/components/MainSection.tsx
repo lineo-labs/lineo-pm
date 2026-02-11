@@ -26,6 +26,7 @@ interface MainSectionProps {
   }) => Promise<void> | void;
   onDeleteTask: (taskId: number) => Promise<void> | void;
   onAdjustTaskDates: (taskId: number, mode: "start" | "end", deltaDays: number) => Promise<void> | void;
+  onReorderTasks: (orderedIds: number[]) => Promise<void> | void;
   onUpdateProject: (projectId: number, payload: {
     name: string;
     description?: string;
@@ -43,6 +44,7 @@ export const MainSection = ({
   onUpdateTask,
   onDeleteTask,
   onAdjustTaskDates,
+  onReorderTasks,
   onUpdateProject,
   loading,
   error,
@@ -76,7 +78,12 @@ export const MainSection = ({
         />
       </div>
 
-      <GanttLayout tasks={tasks} onEditTask={setEditingTask} onAdjustTaskDates={onAdjustTaskDates} />
+      <GanttLayout
+        tasks={tasks}
+        onEditTask={setEditingTask}
+        onAdjustTaskDates={onAdjustTaskDates}
+        onReorderTasks={onReorderTasks}
+      />
 
       <TaskEditDialog
         task={editingTask}

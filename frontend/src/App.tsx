@@ -9,6 +9,7 @@ import {
   deleteTask,
   fetchProjects,
   fetchTasks,
+  reorderTasks,
   updateProject,
   updateTask,
 } from "./lib/api";
@@ -197,6 +198,37 @@ export const App = () => {
     }
   };
 
+  const handleReorderTasks = async (orderedIds: number[]) => {
+    const previous = tasks;
+    const taskMap = new Map(previous.map((task) => [task.id, task]));
+    const nextTasks: Task[] = [];
+
+    orderedIds.forEach((taskId, index) => {
+      const task = taskMap.get(taskId);
+      if (!task) {
+        return;
+      }
+      nextTasks.push({
+        ...task,
+        orderIndex: index + 1,
+      });
+    });
+
+    if (nextTasks.length !== previous.length) {
+      return;
+    }
+
+    setTasks(nextTasks);
+    try {
+      const updated = await reorderTasks(orderedIds);
+      setTasks(updated);
+      setError(null);
+    } catch (err) {
+      setTasks(previous);
+      setError(err instanceof Error ? err.message : "Task reorder error");
+    }
+  };
+
   const handleUpdateProject = async (
     projectId: number,
     payload: {
@@ -236,6 +268,7 @@ export const App = () => {
           onUpdateTask={handleUpdateTask}
           onDeleteTask={handleDeleteTask}
           onAdjustTaskDates={handleAdjustTaskDates}
+          onReorderTasks={handleReorderTasks}
           onUpdateProject={handleUpdateProject}
           loading={isLoading}
           error={error}

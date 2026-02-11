@@ -149,6 +149,20 @@ export const updateTask = async (
   return toTask(data);
 };
 
+export const reorderTasks = async (orderedIds: number[]) => {
+  const response = await fetch(`${API_BASE}/tasks/reorder`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      ordered_ids: orderedIds,
+    }),
+  });
+  const data = await handleResponse<TaskDto[]>(response);
+  return data.map(toTask);
+};
+
 export const deleteTask = async (taskId: number) => {
   const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
     method: "DELETE",
