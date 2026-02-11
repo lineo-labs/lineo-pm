@@ -4,6 +4,7 @@ import type { Project } from "../lib/types";
 import { CreateProjectButton } from "./CreateProjectButton";
 import { CreateProjectForm } from "./CreateProjectForm";
 import { ProjectSelector } from "./ProjectSelector";
+import logo from "../assets/logo.png";
 
 interface SidebarProps {
   projects: Project[];
@@ -38,7 +39,12 @@ export const Sidebar = ({
   return (
     <div className="flex h-full flex-col gap-6">
       <div>
-        <h1 className="text-lg font-semibold tracking-tight">lines-pm</h1>
+        <img
+          src={logo}
+          alt="lines-pm"
+          className="h-14 w-auto"
+          style={{ height: "9.5rem" }}
+        />
         <p className="mt-1 text-xs text-slate-400">AI-native, calm, fast.</p>
       </div>
 
