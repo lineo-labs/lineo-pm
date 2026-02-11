@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { Project, Task, TaskStatus } from "../lib/types";
+import type { Project, ProjectUpdate, Task, TaskStatus } from "../lib/types";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectEditDialog } from "./ProjectEditDialog";
 import { TaskEditDialog } from "./TaskEditDialog";
@@ -10,6 +10,7 @@ import { GanttLayout } from "./Gantt/GanttLayout";
 interface MainSectionProps {
   project?: Project;
   tasks: Task[];
+  updates: ProjectUpdate[];
   onCreateTask: (payload: {
     title: string;
     description?: string;
@@ -17,6 +18,7 @@ interface MainSectionProps {
     startDate: string;
     endDate: string;
   }) => Promise<void> | void;
+  onCreateUpdate: (payload: { text: string }) => Promise<void> | void;
   onUpdateTask: (taskId: number, payload: {
     title: string;
     description?: string;
@@ -41,7 +43,9 @@ interface MainSectionProps {
 export const MainSection = ({
   project,
   tasks,
+  updates,
   onCreateTask,
+  onCreateUpdate,
   onUpdateTask,
   onDeleteTask,
   onAdjustTaskDates,
@@ -70,7 +74,9 @@ export const MainSection = ({
         <ProjectCard
           project={project}
           tasks={tasks}
+          updates={updates}
           onEditTask={setEditingTask}
+          onCreateUpdate={onCreateUpdate}
           onEdit={() => setIsProjectEditing(true)}
         />
         <TasksCard

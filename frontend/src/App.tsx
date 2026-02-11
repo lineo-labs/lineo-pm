@@ -6,19 +6,22 @@ import { Sidebar } from "./components/Sidebar";
 import {
   createProject,
   createTask,
+  createUpdate,
   deleteTask,
   fetchProjects,
   fetchTasks,
+  fetchUpdates,
   reorderTasks,
   updateProject,
   updateTask,
 } from "./lib/api";
 import { addDays, parseISODate, toISODate } from "./lib/dateRange";
-import type { Project, Task, TaskStatus } from "./lib/types";
+import type { Project, ProjectUpdate, Task, TaskStatus } from "./lib/types";
 
 export const App = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +80,31 @@ export const App = () => {
     };
   }, [selectedProjectId]);
 
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setUpdates([]);
+      return;
+    }
+    let active = true;
+    fetchUpdates(selectedProjectId)
+      .then((data) => {
+        if (!active) {
+          return;
+        }
+        setUpdates(data);
+      })
+      .catch((err) => {
+        if (!active) {
+          return;
+        }
+        setError(err instanceof Error ? err.message : "API error");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedProjectId]);
+
   const selectedProject = useMemo<Project | undefined>(() => {
     return projects.find((project) => project.id === selectedProjectId);
   }, [projects, selectedProjectId]);
@@ -120,6 +148,22 @@ export const App = () => {
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Task creation error");
+    }
+  };
+
+  const handleCreateUpdate = async (payload: { text: string }) => {
+    if (!selectedProjectId) {
+      return;
+    }
+    try {
+      const update = await createUpdate({
+        projectId: selectedProjectId,
+        text: payload.text,
+      });
+      setUpdates((prev) => [update, ...prev]);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Update creation error");
     }
   };
 
@@ -286,7 +330,9 @@ export const App = () => {
         <MainSection
           project={selectedProject}
           tasks={sortedTasks}
+          updates={updates}
           onCreateTask={handleCreateTask}
+          onCreateUpdate={handleCreateUpdate}
           onUpdateTask={handleUpdateTask}
           onDeleteTask={handleDeleteTask}
           onAdjustTaskDates={handleAdjustTaskDates}

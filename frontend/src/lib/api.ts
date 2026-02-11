@@ -1,4 +1,4 @@
-import type { Project, Task, TaskStatus } from "./types";
+import type { Project, ProjectUpdate, Task, TaskStatus } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
@@ -22,6 +22,13 @@ interface TaskDto {
   order_index: number;
 }
 
+interface UpdateDto {
+  id: number;
+  project_id: number;
+  text: string;
+  created_at: string;
+}
+
 const toProject = (dto: ProjectDto): Project => ({
   id: dto.id,
   name: dto.name,
@@ -40,6 +47,13 @@ const toTask = (dto: TaskDto): Task => ({
   endDate: dto.end_date,
   dependencies: dto.dependencies,
   orderIndex: dto.order_index,
+});
+
+const toUpdate = (dto: UpdateDto): ProjectUpdate => ({
+  id: dto.id,
+  projectId: dto.project_id,
+  text: dto.text,
+  createdAt: dto.created_at,
 });
 
 const handleResponse = async <T>(response: Response): Promise<T> => {
@@ -193,4 +207,25 @@ export const updateProject = async (
   });
   const data = await handleResponse<ProjectDto>(response);
   return toProject(data);
+};
+
+export const fetchUpdates = async (projectId: number) => {
+  const response = await fetch(`${API_BASE}/updates?project_id=${projectId}`);
+  const data = await handleResponse<UpdateDto[]>(response);
+  return data.map(toUpdate);
+};
+
+export const createUpdate = async (payload: { projectId: number; text: string }) => {
+  const response = await fetch(`${API_BASE}/updates`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      project_id: payload.projectId,
+      text: payload.text,
+    }),
+  });
+  const data = await handleResponse<UpdateDto>(response);
+  return toUpdate(data);
 };

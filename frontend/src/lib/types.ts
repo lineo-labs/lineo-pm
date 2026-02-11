@@ -8,6 +8,13 @@ export interface Project {
   endDate: string;
 }
 
+export interface ProjectUpdate {
+  id: number;
+  projectId: number;
+  text: string;
+  createdAt: string;
+}
+
 export interface Task {
   id: number;
   projectId: number;

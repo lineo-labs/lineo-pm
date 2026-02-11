@@ -26,11 +26,13 @@ export const TasksCard = ({ tasks, projectId, onCreateTask }: TasksCardProps) =>
 
   return (
     <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-100">New task</h2>
-        <span className="text-xs text-slate-500">{tasks.length} total</span>
-      </div>
-      <TaskCreateForm projectId={projectId} onSubmit={handleCreateTask} />
+      <details>
+        <summary className="flex cursor-pointer items-center justify-between text-lg font-semibold text-slate-100">
+          <span>New task</span>
+          <span className="text-xs font-normal text-slate-500">{tasks.length} total</span>
+        </summary>
+        <TaskCreateForm projectId={projectId} onSubmit={handleCreateTask} />
+      </details>
     </section>
   );
 };
