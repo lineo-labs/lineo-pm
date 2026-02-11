@@ -13,12 +13,21 @@ export const addWeeks = (date: Date, amount: number) => addDays(date, amount * 7
 export const diffInDays = (start: Date, end: Date) =>
   Math.max(0, Math.round((end.getTime() - start.getTime()) / MS_PER_DAY));
 
+export const diffInDaysSigned = (start: Date, end: Date) =>
+  Math.round((end.getTime() - start.getTime()) / MS_PER_DAY);
+
 export const startOfWeek = (date: Date) => {
   const utcDay = date.getUTCDay() === 0 ? 7 : date.getUTCDay();
   return addDays(date, 1 - utcDay);
 };
 
 export const endOfWeek = (date: Date) => addDays(startOfWeek(date), 6);
+
+export const startOfMonth = (date: Date) =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+
+export const endOfMonth = (date: Date) =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0));
 
 export const formatDayLabel = (date: Date) =>
   date.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
@@ -28,6 +37,15 @@ export const formatWeekLabel = (date: Date) => {
   const end = endOfWeek(date);
   return `${formatDayLabel(start)} - ${formatDayLabel(end)}`;
 };
+
+export const formatMonthLabel = (date: Date) =>
+  date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+
+export const addMonths = (date: Date, amount: number) =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + amount, date.getUTCDate()));
+
+export const diffInMonths = (start: Date, end: Date) =>
+  (end.getUTCFullYear() - start.getUTCFullYear()) * 12 + (end.getUTCMonth() - start.getUTCMonth());
 
 export const getTaskRange = (tasks: Task[]) => {
   if (tasks.length === 0) {
@@ -53,4 +71,11 @@ export const getWeekColumns = (start: Date, end: Date) => {
   const alignedEnd = endOfWeek(end);
   const weeks = Math.ceil((diffInDays(alignedStart, alignedEnd) + 1) / 7);
   return Array.from({ length: weeks }, (_, index) => addWeeks(alignedStart, index));
+};
+
+export const getMonthColumns = (start: Date, end: Date) => {
+  const alignedStart = startOfMonth(start);
+  const alignedEnd = endOfMonth(end);
+  const months = diffInMonths(alignedStart, alignedEnd) + 1;
+  return Array.from({ length: months }, (_, index) => addMonths(alignedStart, index));
 };

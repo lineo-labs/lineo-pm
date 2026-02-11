@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 import type { Task } from "../../lib/types";
 import type { DateScale } from "../../lib/dateScale";
+import { addMonths, diffInDaysSigned, parseISODate } from "../../lib/dateRange";
 import { GanttBar } from "./GanttBar";
 
 interface GanttRowProps {
@@ -51,7 +52,12 @@ export const GanttRow = ({
     }
     const delta = event.clientX - startXRef.current;
     const steps = Math.round(delta / columnWidth);
-    const deltaDays = steps * (scale === "week" ? 7 : 1);
+    let deltaDays = steps * (scale === "week" ? 7 : 1);
+    if (scale === "month" && steps !== 0) {
+      const baseDate = parseISODate(modeRef.current === "start" ? task.startDate : task.endDate);
+      const nextDate = addMonths(baseDate, steps);
+      deltaDays = diffInDaysSigned(baseDate, nextDate);
+    }
     const mode = modeRef.current;
     setDragOffset(0);
     setDragWidthDelta(0);
