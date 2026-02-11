@@ -10,7 +10,7 @@ interface ProjectCardProps {
 
 export const ProjectCard = ({ project, onEdit, tasks, onEditTask }: ProjectCardProps) => {
   return (
-    <section className="flex h-[360px] flex-col rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
+    <section className="flex flex-col rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-100">
