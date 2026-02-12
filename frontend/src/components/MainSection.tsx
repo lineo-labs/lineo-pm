@@ -18,7 +18,7 @@ interface MainSectionProps {
     startDate: string;
     endDate: string;
   }) => Promise<void> | void;
-  onCreateUpdate: (payload: { text: string }) => Promise<void> | void;
+  onCreateUpdate: (payload: { text: string; taskId?: number }) => Promise<void> | void;
   onUpdateTask: (taskId: number, payload: {
     title: string;
     description?: string;
@@ -98,6 +98,7 @@ export const MainSection = ({
         task={editingTask}
         open={Boolean(editingTask)}
         onClose={() => setEditingTask(null)}
+        onCreateUpdate={onCreateUpdate}
         onSave={(taskId, payload) => {
           onUpdateTask(taskId, payload);
           setEditingTask(null);

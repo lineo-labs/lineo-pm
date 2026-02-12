@@ -24,6 +24,10 @@ export const ProjectCard = ({
   const [updateText, setUpdateText] = useState("");
 
   const updateDisabled = useMemo(() => !project || !updateText.trim(), [project, updateText]);
+  const taskNames = useMemo(
+    () => new Map(tasks.map((task) => [task.id, task.title])),
+    [tasks]
+  );
 
   const handleSubmitUpdate = async () => {
     if (updateDisabled) {
@@ -113,17 +117,22 @@ export const ProjectCard = ({
               <p className="mt-3 text-xs text-slate-500">No updates yet.</p>
             ) : (
               <div className="mt-3 flex flex-col gap-3">
-                {updates.map((update) => (
+                {updates.map((update) => {
+                  const taskTitle = update.taskId ? taskNames.get(update.taskId) : undefined;
+                  const sourceLabel = taskTitle ? `Task: ${taskTitle}` : "Project update";
+                  return (
                   <div
                     key={update.id}
                     className="rounded-lg border border-slate-900 bg-slate-900/40 px-3 py-2"
                   >
-                    <div className="text-[11px] text-slate-500">
-                      {formatDate(update.createdAt)}
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <span>{formatDate(update.createdAt)}</span>
+                      <span>{sourceLabel}</span>
                     </div>
                     <p className="mt-1 text-sm text-slate-200">{update.text}</p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </details>

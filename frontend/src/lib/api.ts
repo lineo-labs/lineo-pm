@@ -25,6 +25,7 @@ interface TaskDto {
 interface UpdateDto {
   id: number;
   project_id: number;
+  task_id: number | null;
   text: string;
   created_at: string;
 }
@@ -52,6 +53,7 @@ const toTask = (dto: TaskDto): Task => ({
 const toUpdate = (dto: UpdateDto): ProjectUpdate => ({
   id: dto.id,
   projectId: dto.project_id,
+  taskId: dto.task_id,
   text: dto.text,
   createdAt: dto.created_at,
 });
@@ -215,7 +217,11 @@ export const fetchUpdates = async (projectId: number) => {
   return data.map(toUpdate);
 };
 
-export const createUpdate = async (payload: { projectId: number; text: string }) => {
+export const createUpdate = async (payload: {
+  projectId: number;
+  text: string;
+  taskId?: number | null;
+}) => {
   const response = await fetch(`${API_BASE}/updates`, {
     method: "POST",
     headers: {
@@ -223,6 +229,7 @@ export const createUpdate = async (payload: { projectId: number; text: string })
     },
     body: JSON.stringify({
       project_id: payload.projectId,
+      task_id: payload.taskId,
       text: payload.text,
     }),
   });

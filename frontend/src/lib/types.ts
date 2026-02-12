@@ -11,6 +11,7 @@ export interface Project {
 export interface ProjectUpdate {
   id: number;
   projectId: number;
+  taskId?: number | null;
   text: string;
   createdAt: string;
 }

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from backend.db.database import get_db
 from backend.db.models.project import Project
+from backend.db.models.task import Task
 from backend.db.models.update import Update
 from backend.schemas.update import UpdateCreate, UpdateOut
 
@@ -26,8 +27,16 @@ def create_update(payload: UpdateCreate, db: Session = Depends(get_db)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    if payload.task_id is not None:
+        task = db.query(Task).filter(Task.id == payload.task_id).first()
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if task.project_id != payload.project_id:
+            raise HTTPException(status_code=400, detail="Task does not belong to project")
+
     update = Update(
         project_id=payload.project_id,
+        task_id=payload.task_id,
         text=payload.text,
     )
     db.add(update)

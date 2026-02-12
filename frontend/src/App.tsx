@@ -151,14 +151,19 @@ export const App = () => {
     }
   };
 
-  const handleCreateUpdate = async (payload: { text: string }) => {
-    if (!selectedProjectId) {
+  const handleCreateUpdate = async (payload: { text: string; taskId?: number }) => {
+    const targetTask = payload.taskId
+      ? tasks.find((task) => task.id === payload.taskId)
+      : undefined;
+    const projectId = targetTask?.projectId ?? selectedProjectId;
+    if (!projectId) {
       return;
     }
     try {
       const update = await createUpdate({
-        projectId: selectedProjectId,
+        projectId,
         text: payload.text,
+        taskId: payload.taskId,
       });
       setUpdates((prev) => [update, ...prev]);
       setError(null);
