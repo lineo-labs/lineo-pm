@@ -12,7 +12,6 @@ interface GanttBarProps {
   onPointerCancel: (event: PointerEvent<HTMLDivElement>) => void;
   onResizeStartPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
   onResizeEndPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
-  onEdit: () => void;
 }
 
 export const GanttBar = ({
@@ -27,7 +26,6 @@ export const GanttBar = ({
   onPointerCancel,
   onResizeStartPointerDown,
   onResizeEndPointerDown,
-  onEdit,
 }: GanttBarProps) => {
   return (
     <div
@@ -52,17 +50,7 @@ export const GanttBar = ({
         onPointerCancel={onPointerCancel}
       />
       <div className="truncate leading-7">{title}</div>
-      <button
-        type="button"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.stopPropagation();
-          onEdit();
-        }}
-        className="rounded-full border border-white/20 px-2 py-0.5 text-[10px] text-white/90"
-      >
-        Edit
-      </button>
+      {/* Edit button removed from draggable bar */}
       <div
         className="h-4 w-2 cursor-ew-resize rounded-full bg-white/60"
         onPointerDown={(event) => {

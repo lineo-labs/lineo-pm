@@ -42,3 +42,31 @@ body {
   background-color: rgba(99, 102, 241, 0.2);
   color: #e2e8f0;
 }
+
+/* Custom Gantt-like scrollbar for expandable lists and timeline */
+.scrollbar-gantt {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99,102,241,0.6) transparent;
+}
+
+.scrollbar-gantt::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.scrollbar-gantt::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-gantt::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.6);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 0 2px 6px rgba(99,102,241,0.18), inset 0 0 0 1px rgba(255,255,255,0.03);
+}
+
+.scrollbar-gantt:hover::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.75);
+}
+

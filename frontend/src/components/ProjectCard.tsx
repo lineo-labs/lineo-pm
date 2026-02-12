@@ -73,7 +73,7 @@ export const ProjectCard = ({
             {milestones.length === 0 ? (
               <p className="mt-3 text-sm text-slate-500">No milestones.</p>
             ) : (
-              <div className="mt-3 max-h-[150px] overflow-y-auto pr-2">
+              <div className="mt-3 max-h-[150px] overflow-y-auto pr-2 scrollbar-gantt">
                 <ul className="flex flex-col gap-2">
                   {milestones.map((milestone) => (
                     <li
@@ -110,7 +110,7 @@ export const ProjectCard = ({
             <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-200">
               <span>Updates ({updates.length})</span>
             </summary>
-            <div className="mt-3 max-h-[200px] overflow-y-auto pr-2">
+            <div className="mt-3 max-h-[200px] overflow-y-auto pr-2 scrollbar-gantt">
               {updates.length === 0 ? (
                 <p className="text-xs text-slate-500">No updates yet.</p>
               ) : (

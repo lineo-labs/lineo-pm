@@ -196,7 +196,7 @@ const MilestoneLine = ({
 
   return (
     <div
-      className={`absolute top-0 z-20 flex h-full w-4 -translate-x-1/2 items-start justify-center ${
+      className={`absolute top-0 z-20 flex h-full w-4 -translate-x-1/2 items-stretch justify-center ${
         dragging ? "cursor-grabbing" : "cursor-ew-resize"
       }`}
       style={{ left: left + dragOffset }}
@@ -206,9 +206,8 @@ const MilestoneLine = ({
       onPointerCancel={handlePointerCancel}
     >
       <div className="relative flex h-full flex-col items-center group">
-        <div className="mt-1 h-2 w-2 rounded-full bg-amber-400 shadow shadow-amber-500/40" />
-        <div className="mt-1 w-px flex-1 bg-amber-400/70" />
-          <div className="pointer-events-none absolute top-2 left-3 z-30 w-52 rounded-md border border-slate-800 bg-slate-950 px-2 py-2 text-[11px] text-slate-200 opacity-0 shadow-lg transition group-hover:opacity-100">
+      <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-amber-400/70" />
+        <div className="pointer-events-none absolute top-2 left-3 z-30 w-52 rounded-md border border-slate-800 bg-slate-950 px-2 py-2 text-[11px] text-slate-200 opacity-0 shadow-lg transition group-hover:opacity-100">
           <div className="text-xs font-semibold text-slate-100">{milestone.title}</div>
           <div className="mt-1 text-[10px] text-slate-400">
             {formatMilestoneDate(milestone.targetDate)}
@@ -217,14 +216,14 @@ const MilestoneLine = ({
             <div className="mt-1 text-[11px] text-slate-300">{milestone.description}</div>
           )}
         </div>
-          {dragging && previewLabel && (
-            <div
-              className="absolute -top-8 z-40 rounded-md bg-slate-800/90 px-2 py-0.5 text-xs text-slate-100 shadow"
-              style={{ left: dragOffset > 0 ? "100%" : "0%", transform: dragOffset > 0 ? "translateX(-100%)" : undefined }}
-            >
-              {previewLabel}
-            </div>
-          )}
+        {dragging && previewLabel && (
+          <div
+            className="absolute -top-8 z-40 rounded-md bg-slate-800/90 px-2 py-0.5 text-xs text-slate-100 shadow"
+            style={{ left: dragOffset > 0 ? "100%" : "0%", transform: dragOffset > 0 ? "translateX(-100%)" : undefined }}
+          >
+            {previewLabel}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -267,7 +266,6 @@ export const GanttMilestones = ({
       className="absolute left-0 right-0 pointer-events-none z-20"
       style={{ top: headerHeight, height }}
     >
-      <div className="absolute left-0 right-0 h-0.5 bg-slate-800/70" style={{ top: 8 }} />
       {milestones.map((milestone) => (
         <div key={milestone.id} className="pointer-events-auto">
           <MilestoneLine

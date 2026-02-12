@@ -260,7 +260,7 @@ export const GanttRow = ({
         onPointerCancel={handlePointerCancelLocal}
         onResizeStartPointerDown={handlePointerDown("start")}
         onResizeEndPointerDown={handlePointerDown("end")}
-        onEdit={() => onEditTask(task)}
+        
       />
       {dragging && previewLabel && (
         <div

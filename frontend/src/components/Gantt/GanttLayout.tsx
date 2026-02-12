@@ -278,7 +278,7 @@ export const GanttLayout = ({
         <div className="text-xs text-slate-500">{tasks.length} tasks</div>
       </div>
 
-      <div ref={layoutRef} className="grid grid-cols-[220px_1fr] gap-0">
+      <div ref={layoutRef} className="grid grid-cols-[260px_1fr] gap-0">
         <GanttTaskList
           tasks={tasks}
           rowHeight={ROW_HEIGHT}

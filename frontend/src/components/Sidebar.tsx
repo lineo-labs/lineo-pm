@@ -44,7 +44,7 @@ export const Sidebar = ({
           alt="lines-pm"
           className="h-10 w-auto"
         />
-        <p className="mt-1 text-xs text-slate-400">AI-native, calm, fast.</p>
+        <p className="mt-1 text-xs text-slate-400">Time-centric, easy, fast.</p>
       </div>
 
       <CreateProjectButton onClick={() => setShowCreateForm((prev) => !prev)} />

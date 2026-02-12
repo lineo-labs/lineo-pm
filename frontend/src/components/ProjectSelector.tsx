@@ -58,7 +58,7 @@ export const ProjectSelector = ({
             onChange={(event) => setQuery(event.target.value)}
             className="w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none"
           />
-          <ul className="mt-2 max-h-56 overflow-y-auto">
+          <ul className="mt-2 max-h-56 overflow-y-auto scrollbar-gantt">
             {filteredProjects.map((project) => (
               <li key={project.id}>
                 <button
