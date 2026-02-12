@@ -266,6 +266,8 @@ export const GanttLayout = ({
     };
   }, [draggingTaskId, onReorderTasks, tasks]);
 
+  const draggingIndex = draggingTaskId !== null ? tasks.findIndex((t) => t.id === draggingTaskId) : null;
+
   return (
     <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -278,7 +280,33 @@ export const GanttLayout = ({
         <div className="text-xs text-slate-500">{tasks.length} tasks</div>
       </div>
 
-      <div ref={layoutRef} className="grid grid-cols-[260px_1fr] gap-0">
+      <div ref={layoutRef} className="relative grid grid-cols-[260px_1fr] gap-0">
+        {/* full-row overlays span both columns to color the entire row during reordering */}
+        {draggingIndex !== null && draggingIndex >= 0 && (
+          <div
+            aria-hidden
+            className="absolute left-0 right-0 rounded-xl pointer-events-none transition-all"
+            style={{
+              top: HEADER_HEIGHT + draggingIndex * ROW_HEIGHT,
+              height: ROW_HEIGHT,
+              background: "rgba(99,102,241,0.06)",
+              boxShadow: "0 6px 18px rgba(15, 23, 42, 0.25)",
+              zIndex: 20,
+            }}
+          />
+        )}
+        {dropIndex !== null && (
+          <div
+            aria-hidden
+            className="absolute left-0 right-0 rounded-xl pointer-events-none transition-all"
+            style={{
+              top: HEADER_HEIGHT + dropIndex * ROW_HEIGHT,
+              height: ROW_HEIGHT,
+              background: "rgba(16,185,129,0.06)",
+              zIndex: 15,
+            }}
+          />
+        )}
         <GanttTaskList
           tasks={tasks}
           rowHeight={ROW_HEIGHT}
