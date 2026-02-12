@@ -37,13 +37,12 @@ export const Sidebar = ({
   };
 
   return (
-    <div className="flex h-full flex-col gap-6">
+    <div className="flex h-full flex-col gap-4">
       <div>
         <img
           src={logo}
           alt="lines-pm"
-          className="h-14 w-auto"
-          style={{ height: "9.5rem" }}
+          className="h-10 w-auto"
         />
         <p className="mt-1 text-xs text-slate-400">AI-native, calm, fast.</p>
       </div>
