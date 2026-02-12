@@ -57,3 +57,13 @@ def update_milestone(milestone_id: int, payload: MilestoneUpdate, db: Session = 
     db.commit()
     db.refresh(milestone)
     return milestone
+
+
+@router.delete("/{milestone_id}", status_code=204)
+def delete_milestone(milestone_id: int, db: Session = Depends(get_db)):
+    milestone = db.query(Milestone).filter(Milestone.id == milestone_id).first()
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+    db.delete(milestone)
+    db.commit()
+    return None

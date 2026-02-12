@@ -3,22 +3,33 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import type { Milestone, Task } from "../../lib/types";
 import {
   diffInDays,
+  diffInMonths,
   formatDayLabel,
-        <div
-          ref={timelineRef}
-          className="relative overflow-visible rounded-r-xl border border-slate-900 bg-slate-950"
-        >
-          <div className="overflow-hidden">
+  formatMonthLabel,
+  formatWeekLabel,
+  getDateColumns,
+  getMonthColumns,
+  getTaskRange,
   getWeekColumns,
   parseISODate,
   startOfMonth,
   startOfWeek,
-  diffInMonths,
 } from "../../lib/dateRange";
 import { getAutoScale, getRangeScale } from "../../lib/dateScale";
 import { GanttGrid } from "./GanttGrid";
 import { GanttHeader } from "./GanttHeader";
 import { GanttMilestones } from "./GanttMilestones";
+import { GanttRow } from "./GanttRow";
+import { GanttTaskList } from "./GanttTaskList";
+
+interface GanttLayoutProps {
+  tasks: Task[];
+  milestones: Milestone[];
+  onEditTask: (task: Task) => void;
+  onAdjustTaskDates: (taskId: number, mode: "start" | "end", deltaDays: number) => void;
+  onMoveTaskDates: (taskId: number, deltaDays: number) => void;
+  onReorderTasks: (orderedIds: number[]) => void;
+  onMoveMilestone: (milestoneId: number, deltaDays: number) => void;
 }
 
 const ROW_HEIGHT = 44;
@@ -44,17 +55,6 @@ export const GanttLayout = ({
   const dragPointerIdRef = useRef<number | null>(null);
   const dragStartIndexRef = useRef<number>(0);
   const dropIndexRef = useRef<number | null>(null);
-          {milestones.length > 0 && (
-            <GanttMilestones
-              milestones={milestones}
-              rangeStart={rangeStart}
-              columnWidth={columnWidth}
-              scale={scale}
-              height={Math.max(tasks.length, 1) * ROW_HEIGHT}
-              headerHeight={HEADER_HEIGHT}
-              onMoveMilestone={onMoveMilestone}
-            />
-          )}
 
   const clampIndex = (value: number) => {
     if (tasks.length === 0) {
@@ -96,6 +96,7 @@ export const GanttLayout = ({
     const end = new Date(Math.max(...dates.map((date) => date.getTime())));
     return { start, end };
   }, [milestones, tasks]);
+
   const fallbackScale = getRangeScale(start, end);
   const autoScale = useMemo(() => {
     if (timelineWidth <= 0) {
@@ -105,7 +106,8 @@ export const GanttLayout = ({
   }, [start, end, timelineWidth]);
 
   const scale = autoScale?.scale ?? fallbackScale;
-  const columnWidth = autoScale?.columnWidth ??
+  const columnWidth =
+    autoScale?.columnWidth ??
     (scale === "week" ? WEEK_WIDTH : scale === "month" ? MONTH_WIDTH : DAY_WIDTH);
 
   const rangeStart =
@@ -257,9 +259,9 @@ export const GanttLayout = ({
         />
         <div
           ref={timelineRef}
-          className="relative overflow-hidden rounded-r-xl border border-slate-900 bg-slate-950"
+          className="relative overflow-visible rounded-r-xl border border-slate-900 bg-slate-950"
         >
-          <div>
+          <div className="overflow-hidden">
             <GanttHeader labels={headerLabels} columnWidth={columnWidth} height={HEADER_HEIGHT} />
             <GanttGrid
               columns={columns.length}
@@ -270,17 +272,6 @@ export const GanttLayout = ({
               scale={scale}
               columnDates={scale === "day" ? columns : []}
             />
-            {milestones.length > 0 && (
-              <GanttMilestones
-                milestones={milestones}
-                rangeStart={rangeStart}
-                columnWidth={columnWidth}
-                scale={scale}
-                height={Math.max(tasks.length, 1) * ROW_HEIGHT}
-                headerHeight={HEADER_HEIGHT}
-                onMoveMilestone={onMoveMilestone}
-              />
-            )}
             <div className="relative">
               {draggingTaskId !== null && dropIndex !== null && (
                 <div
@@ -306,6 +297,17 @@ export const GanttLayout = ({
               ))}
             </div>
           </div>
+          {milestones.length > 0 && (
+            <GanttMilestones
+              milestones={milestones}
+              rangeStart={rangeStart}
+              columnWidth={columnWidth}
+              scale={scale}
+              height={Math.max(tasks.length, 1) * ROW_HEIGHT}
+              headerHeight={HEADER_HEIGHT}
+              onMoveMilestone={onMoveMilestone}
+            />
+          )}
         </div>
       </div>
     </section>

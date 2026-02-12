@@ -7,7 +7,9 @@ import {
   createProject,
   createTask,
   createUpdate,
+  createMilestone,
   deleteTask,
+  deleteMilestone,
   fetchMilestones,
   fetchProjects,
   fetchTasks,
@@ -200,6 +202,28 @@ export const App = () => {
     }
   };
 
+  const handleCreateMilestone = async (payload: {
+    title: string;
+    description?: string;
+    targetDate: string;
+  }) => {
+    if (!selectedProjectId) {
+      return;
+    }
+    try {
+      const milestone = await createMilestone({
+        projectId: selectedProjectId,
+        ...payload,
+      });
+      setMilestones((prev) =>
+        [...prev, milestone].sort((a, b) => a.targetDate.localeCompare(b.targetDate))
+      );
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Milestone creation error");
+    }
+  };
+
   const handleUpdateTask = async (
     taskId: number,
     payload: {
@@ -349,6 +373,48 @@ export const App = () => {
     }
   };
 
+  const handleUpdateMilestone = async (
+    milestoneId: number,
+    payload: {
+      title: string;
+      description?: string;
+      targetDate: string;
+    }
+  ) => {
+    const previous = milestones;
+    setMilestones((prev) =>
+      prev
+        .map((milestone) =>
+          milestone.id === milestoneId ? { ...milestone, ...payload } : milestone
+        )
+        .sort((a, b) => a.targetDate.localeCompare(b.targetDate))
+    );
+    try {
+      const updated = await updateMilestone(milestoneId, payload);
+      setMilestones((prev) =>
+        prev
+          .map((milestone) => (milestone.id === milestoneId ? updated : milestone))
+          .sort((a, b) => a.targetDate.localeCompare(b.targetDate))
+      );
+      setError(null);
+    } catch (err) {
+      setMilestones(previous);
+      setError(err instanceof Error ? err.message : "Milestone update error");
+    }
+  };
+
+  const handleDeleteMilestone = async (milestoneId: number) => {
+    const previous = milestones;
+    setMilestones((prev) => prev.filter((milestone) => milestone.id !== milestoneId));
+    try {
+      await deleteMilestone(milestoneId);
+      setError(null);
+    } catch (err) {
+      setMilestones(previous);
+      setError(err instanceof Error ? err.message : "Milestone deletion error");
+    }
+  };
+
   const handleMoveMilestone = async (milestoneId: number, deltaDays: number) => {
     if (deltaDays === 0) {
       return;
@@ -394,6 +460,9 @@ export const App = () => {
           updates={updates}
           onCreateTask={handleCreateTask}
           onCreateUpdate={handleCreateUpdate}
+          onCreateMilestone={handleCreateMilestone}
+          onUpdateMilestone={handleUpdateMilestone}
+          onDeleteMilestone={handleDeleteMilestone}
           onUpdateTask={handleUpdateTask}
           onDeleteTask={handleDeleteTask}
           onAdjustTaskDates={handleAdjustTaskDates}

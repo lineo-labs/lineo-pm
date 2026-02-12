@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import type { Milestone, Project, ProjectUpdate, Task, TaskStatus } from "../lib/types";
 import { ProjectCard } from "./ProjectCard";
+import { MilestoneEditDialog } from "./MilestoneEditDialog";
 import { ProjectEditDialog } from "./ProjectEditDialog";
 import { TaskEditDialog } from "./TaskEditDialog";
 import { TasksCard } from "./TasksCard";
@@ -20,6 +21,17 @@ interface MainSectionProps {
     endDate: string;
   }) => Promise<void> | void;
   onCreateUpdate: (payload: { text: string; taskId?: number }) => Promise<void> | void;
+  onCreateMilestone: (payload: {
+    title: string;
+    description?: string;
+    targetDate: string;
+  }) => Promise<void> | void;
+  onUpdateMilestone: (milestoneId: number, payload: {
+    title: string;
+    description?: string;
+    targetDate: string;
+  }) => Promise<void> | void;
+  onDeleteMilestone: (milestoneId: number) => Promise<void> | void;
   onUpdateTask: (taskId: number, payload: {
     title: string;
     description?: string;
@@ -49,6 +61,9 @@ export const MainSection = ({
   milestones,
   onCreateTask,
   onCreateUpdate,
+  onCreateMilestone,
+  onUpdateMilestone,
+  onDeleteMilestone,
   onUpdateTask,
   onDeleteTask,
   onAdjustTaskDates,
@@ -60,6 +75,7 @@ export const MainSection = ({
   error,
 }: MainSectionProps) => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
   const [isProjectEditing, setIsProjectEditing] = useState(false);
 
   return (
@@ -78,15 +94,18 @@ export const MainSection = ({
         <ProjectCard
           project={project}
           tasks={tasks}
+          milestones={milestones}
           updates={updates}
           onEditTask={setEditingTask}
-          onCreateUpdate={onCreateUpdate}
+          onEditMilestone={setEditingMilestone}
           onEdit={() => setIsProjectEditing(true)}
         />
         <TasksCard
           tasks={tasks}
           projectId={project?.id}
           onCreateTask={onCreateTask}
+          onCreateMilestone={onCreateMilestone}
+          onCreateUpdate={onCreateUpdate}
         />
       </div>
 
@@ -112,6 +131,19 @@ export const MainSection = ({
         onDelete={async (taskId) => {
           await onDeleteTask(taskId);
           setEditingTask(null);
+        }}
+      />
+      <MilestoneEditDialog
+        milestone={editingMilestone}
+        open={Boolean(editingMilestone)}
+        onClose={() => setEditingMilestone(null)}
+        onSave={(milestoneId, payload) => {
+          onUpdateMilestone(milestoneId, payload);
+          setEditingMilestone(null);
+        }}
+        onDelete={async (milestoneId) => {
+          await onDeleteMilestone(milestoneId);
+          setEditingMilestone(null);
         }}
       />
       <ProjectEditDialog

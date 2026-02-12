@@ -280,6 +280,13 @@ export const updateMilestone = async (
   return toMilestone(data);
 };
 
+export const deleteMilestone = async (milestoneId: number) => {
+  const response = await fetch(`${API_BASE}/milestones/${milestoneId}`, {
+    method: "DELETE",
+  });
+  await handleVoidResponse(response);
+};
+
 export const fetchUpdates = async (projectId: number) => {
   const response = await fetch(`${API_BASE}/updates?project_id=${projectId}`);
   const data = await handleResponse<UpdateDto[]>(response);
