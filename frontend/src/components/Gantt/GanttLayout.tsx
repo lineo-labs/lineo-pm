@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 
-import type { Task } from "../../lib/types";
+import type { Milestone, Task } from "../../lib/types";
 import {
   diffInDays,
   formatDayLabel,
-  formatMonthLabel,
-  formatWeekLabel,
-  getDateColumns,
-  getMonthColumns,
-  getTaskRange,
+        <div
+          ref={timelineRef}
+          className="relative overflow-visible rounded-r-xl border border-slate-900 bg-slate-950"
+        >
+          <div className="overflow-hidden">
   getWeekColumns,
   parseISODate,
   startOfMonth,
@@ -18,15 +18,7 @@ import {
 import { getAutoScale, getRangeScale } from "../../lib/dateScale";
 import { GanttGrid } from "./GanttGrid";
 import { GanttHeader } from "./GanttHeader";
-import { GanttRow } from "./GanttRow";
-import { GanttTaskList } from "./GanttTaskList";
-
-interface GanttLayoutProps {
-  tasks: Task[];
-  onEditTask: (task: Task) => void;
-  onAdjustTaskDates: (taskId: number, mode: "start" | "end", deltaDays: number) => void;
-  onMoveTaskDates: (taskId: number, deltaDays: number) => void;
-  onReorderTasks: (orderedIds: number[]) => void;
+import { GanttMilestones } from "./GanttMilestones";
 }
 
 const ROW_HEIGHT = 44;
@@ -37,10 +29,12 @@ const HEADER_HEIGHT = 38;
 
 export const GanttLayout = ({
   tasks,
+  milestones,
   onEditTask,
   onAdjustTaskDates,
   onMoveTaskDates,
   onReorderTasks,
+  onMoveMilestone,
 }: GanttLayoutProps) => {
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
@@ -50,6 +44,17 @@ export const GanttLayout = ({
   const dragPointerIdRef = useRef<number | null>(null);
   const dragStartIndexRef = useRef<number>(0);
   const dropIndexRef = useRef<number | null>(null);
+          {milestones.length > 0 && (
+            <GanttMilestones
+              milestones={milestones}
+              rangeStart={rangeStart}
+              columnWidth={columnWidth}
+              scale={scale}
+              height={Math.max(tasks.length, 1) * ROW_HEIGHT}
+              headerHeight={HEADER_HEIGHT}
+              onMoveMilestone={onMoveMilestone}
+            />
+          )}
 
   const clampIndex = (value: number) => {
     if (tasks.length === 0) {
@@ -75,7 +80,22 @@ export const GanttLayout = ({
     return () => observer.disconnect();
   }, []);
 
-  const { start, end } = getTaskRange(tasks);
+  const { start, end } = useMemo(() => {
+    if (tasks.length === 0 && milestones.length === 0) {
+      return getTaskRange([]);
+    }
+    const dates: Date[] = [];
+    tasks.forEach((task) => {
+      dates.push(parseISODate(task.startDate));
+      dates.push(parseISODate(task.endDate));
+    });
+    milestones.forEach((milestone) => {
+      dates.push(parseISODate(milestone.targetDate));
+    });
+    const start = new Date(Math.min(...dates.map((date) => date.getTime())));
+    const end = new Date(Math.max(...dates.map((date) => date.getTime())));
+    return { start, end };
+  }, [milestones, tasks]);
   const fallbackScale = getRangeScale(start, end);
   const autoScale = useMemo(() => {
     if (timelineWidth <= 0) {
@@ -222,7 +242,7 @@ export const GanttLayout = ({
         <div>
           <h2 className="text-lg font-semibold text-slate-100">Gantt</h2>
           <p className="text-xs text-slate-500">
-            Scale: {scale === "week" ? "Weeks" : "Days"}
+            Scale: {scale === "month" ? "Months" : scale === "week" ? "Weeks" : "Days"}
           </p>
         </div>
         <div className="text-xs text-slate-500">{tasks.length} tasks</div>
@@ -250,6 +270,17 @@ export const GanttLayout = ({
               scale={scale}
               columnDates={scale === "day" ? columns : []}
             />
+            {milestones.length > 0 && (
+              <GanttMilestones
+                milestones={milestones}
+                rangeStart={rangeStart}
+                columnWidth={columnWidth}
+                scale={scale}
+                height={Math.max(tasks.length, 1) * ROW_HEIGHT}
+                headerHeight={HEADER_HEIGHT}
+                onMoveMilestone={onMoveMilestone}
+              />
+            )}
             <div className="relative">
               {draggingTaskId !== null && dropIndex !== null && (
                 <div

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from backend.db.models.project import Project
 from backend.db.models.task import Task
 from backend.db.models.update import Update
+from backend.db.models.milestone import Milestone
 
 
 def ensure_default_project(db: Session) -> Project:
@@ -122,3 +123,40 @@ def ensure_sample_updates(db: Session, project_id: int, tasks: list[Task]) -> li
     db.add_all(updates)
     db.commit()
     return db.query(Update).order_by(Update.created_at.desc()).all()
+
+
+def ensure_sample_milestones(db: Session, project_id: int) -> list[Milestone]:
+    existing = db.query(Milestone).count()
+    if existing:
+        return db.query(Milestone).order_by(Milestone.target_date.asc()).all()
+
+    today = date.today()
+    milestones = [
+        Milestone(
+            project_id=project_id,
+            title="MVP scope locked",
+            description="All core v0.1 items confirmed",
+            target_date=today - timedelta(days=5),
+        ),
+        Milestone(
+            project_id=project_id,
+            title="Backend CRUD ready",
+            description="API + DB schema stable",
+            target_date=today + timedelta(days=2),
+        ),
+        Milestone(
+            project_id=project_id,
+            title="Gantt interactions",
+            description="Drag and resize synced",
+            target_date=today + timedelta(days=7),
+        ),
+        Milestone(
+            project_id=project_id,
+            title="Polish pass",
+            description="UI copy, empty states, and performance",
+            target_date=today + timedelta(days=12),
+        ),
+    ]
+    db.add_all(milestones)
+    db.commit()
+    return db.query(Milestone).order_by(Milestone.target_date.asc()).all()

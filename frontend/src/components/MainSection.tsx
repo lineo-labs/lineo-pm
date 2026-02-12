@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { Project, ProjectUpdate, Task, TaskStatus } from "../lib/types";
+import type { Milestone, Project, ProjectUpdate, Task, TaskStatus } from "../lib/types";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectEditDialog } from "./ProjectEditDialog";
 import { TaskEditDialog } from "./TaskEditDialog";
@@ -11,6 +11,7 @@ interface MainSectionProps {
   project?: Project;
   tasks: Task[];
   updates: ProjectUpdate[];
+  milestones: Milestone[];
   onCreateTask: (payload: {
     title: string;
     description?: string;
@@ -30,6 +31,7 @@ interface MainSectionProps {
   onAdjustTaskDates: (taskId: number, mode: "start" | "end", deltaDays: number) => Promise<void> | void;
   onMoveTaskDates: (taskId: number, deltaDays: number) => Promise<void> | void;
   onReorderTasks: (orderedIds: number[]) => Promise<void> | void;
+  onMoveMilestone: (milestoneId: number, deltaDays: number) => Promise<void> | void;
   onUpdateProject: (projectId: number, payload: {
     name: string;
     description?: string;
@@ -44,6 +46,7 @@ export const MainSection = ({
   project,
   tasks,
   updates,
+  milestones,
   onCreateTask,
   onCreateUpdate,
   onUpdateTask,
@@ -51,6 +54,7 @@ export const MainSection = ({
   onAdjustTaskDates,
   onMoveTaskDates,
   onReorderTasks,
+  onMoveMilestone,
   onUpdateProject,
   loading,
   error,
@@ -88,10 +92,12 @@ export const MainSection = ({
 
       <GanttLayout
         tasks={tasks}
+        milestones={milestones}
         onEditTask={setEditingTask}
         onAdjustTaskDates={onAdjustTaskDates}
         onMoveTaskDates={onMoveTaskDates}
         onReorderTasks={onReorderTasks}
+        onMoveMilestone={onMoveMilestone}
       />
 
       <TaskEditDialog

@@ -1,4 +1,4 @@
-import type { Project, ProjectUpdate, Task, TaskStatus } from "./types";
+import type { Milestone, Project, ProjectUpdate, Task, TaskStatus } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
@@ -30,6 +30,14 @@ interface UpdateDto {
   created_at: string;
 }
 
+interface MilestoneDto {
+  id: number;
+  project_id: number;
+  title: string;
+  description: string | null;
+  target_date: string;
+}
+
 const toProject = (dto: ProjectDto): Project => ({
   id: dto.id,
   name: dto.name,
@@ -56,6 +64,14 @@ const toUpdate = (dto: UpdateDto): ProjectUpdate => ({
   taskId: dto.task_id,
   text: dto.text,
   createdAt: dto.created_at,
+});
+
+const toMilestone = (dto: MilestoneDto): Milestone => ({
+  id: dto.id,
+  projectId: dto.project_id,
+  title: dto.title,
+  description: dto.description ?? undefined,
+  targetDate: dto.target_date,
 });
 
 const handleResponse = async <T>(response: Response): Promise<T> => {
@@ -209,6 +225,59 @@ export const updateProject = async (
   });
   const data = await handleResponse<ProjectDto>(response);
   return toProject(data);
+};
+
+export const fetchMilestones = async (projectId: number) => {
+  const response = await fetch(`${API_BASE}/milestones?project_id=${projectId}`);
+  const data = await handleResponse<MilestoneDto[]>(response);
+  return data.map(toMilestone);
+};
+
+export const createMilestone = async (payload: {
+  projectId: number;
+  title: string;
+  description?: string;
+  targetDate: string;
+}) => {
+  const response = await fetch(`${API_BASE}/milestones`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      project_id: payload.projectId,
+      title: payload.title,
+      description: payload.description,
+      target_date: payload.targetDate,
+    }),
+  });
+  const data = await handleResponse<MilestoneDto>(response);
+  return toMilestone(data);
+};
+
+export const updateMilestone = async (
+  milestoneId: number,
+  payload: Partial<{
+    projectId: number;
+    title: string;
+    description?: string;
+    targetDate: string;
+  }>
+) => {
+  const response = await fetch(`${API_BASE}/milestones/${milestoneId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      project_id: payload.projectId,
+      title: payload.title,
+      description: payload.description,
+      target_date: payload.targetDate,
+    }),
+  });
+  const data = await handleResponse<MilestoneDto>(response);
+  return toMilestone(data);
 };
 
 export const fetchUpdates = async (projectId: number) => {

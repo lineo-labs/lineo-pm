@@ -3,7 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.db.database import SessionLocal, init_db
 from backend.routers import api_router
-from backend.seed import ensure_default_project, ensure_sample_tasks, ensure_sample_updates
+from backend.seed import (
+	ensure_default_project,
+	ensure_sample_milestones,
+	ensure_sample_tasks,
+	ensure_sample_updates,
+)
 
 app = FastAPI(title="Lines PM Backend")
 app.add_middleware(
@@ -29,5 +34,6 @@ def on_startup():
 		project = ensure_default_project(db)
 		tasks = ensure_sample_tasks(db, project.id)
 		ensure_sample_updates(db, project.id, tasks)
+		ensure_sample_milestones(db, project.id)
 	finally:
 		db.close()

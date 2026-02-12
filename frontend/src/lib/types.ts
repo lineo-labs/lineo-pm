@@ -27,3 +27,11 @@ export interface Task {
   dependencies: number[];
   orderIndex?: number;
 }
+
+export interface Milestone {
+  id: number;
+  projectId: number;
+  title: string;
+  description?: string;
+  targetDate: string;
+}

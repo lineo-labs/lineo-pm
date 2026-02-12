@@ -8,19 +8,22 @@ import {
   createTask,
   createUpdate,
   deleteTask,
+  fetchMilestones,
   fetchProjects,
   fetchTasks,
   fetchUpdates,
   reorderTasks,
+  updateMilestone,
   updateProject,
   updateTask,
 } from "./lib/api";
 import { addDays, parseISODate, toISODate } from "./lib/dateRange";
-import type { Project, ProjectUpdate, Task, TaskStatus } from "./lib/types";
+import type { Milestone, Project, ProjectUpdate, Task, TaskStatus } from "./lib/types";
 
 export const App = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,6 +95,31 @@ export const App = () => {
           return;
         }
         setUpdates(data);
+      })
+      .catch((err) => {
+        if (!active) {
+          return;
+        }
+        setError(err instanceof Error ? err.message : "API error");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setMilestones([]);
+      return;
+    }
+    let active = true;
+    fetchMilestones(selectedProjectId)
+      .then((data) => {
+        if (!active) {
+          return;
+        }
+        setMilestones(data);
       })
       .catch((err) => {
         if (!active) {
@@ -321,6 +349,34 @@ export const App = () => {
     }
   };
 
+  const handleMoveMilestone = async (milestoneId: number, deltaDays: number) => {
+    if (deltaDays === 0) {
+      return;
+    }
+    const target = milestones.find((milestone) => milestone.id === milestoneId);
+    if (!target) {
+      return;
+    }
+    const currentDate = parseISODate(target.targetDate);
+    const nextDate = addDays(currentDate, deltaDays);
+    const previous = milestones;
+    setMilestones((prev) =>
+      prev.map((milestone) =>
+        milestone.id === milestoneId ? { ...milestone, targetDate: toISODate(nextDate) } : milestone
+      )
+    );
+    try {
+      const updated = await updateMilestone(milestoneId, { targetDate: toISODate(nextDate) });
+      setMilestones((prev) =>
+        prev.map((milestone) => (milestone.id === milestoneId ? updated : milestone))
+      );
+      setError(null);
+    } catch (err) {
+      setMilestones(previous);
+      setError(err instanceof Error ? err.message : "Milestone update error");
+    }
+  };
+
   return (
     <AppShell
       sidebar={
@@ -343,6 +399,8 @@ export const App = () => {
           onAdjustTaskDates={handleAdjustTaskDates}
           onMoveTaskDates={handleMoveTaskDates}
           onReorderTasks={handleReorderTasks}
+          milestones={milestones}
+          onMoveMilestone={handleMoveMilestone}
           onUpdateProject={handleUpdateProject}
           loading={isLoading}
           error={error}

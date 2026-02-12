@@ -8,7 +8,7 @@ interface ProjectCardProps {
   tasks: Task[];
   updates: ProjectUpdate[];
   onEditTask: (task: Task) => void;
-  onCreateUpdate: (payload: { text: string }) => Promise<void> | void;
+  onCreateUpdate: (payload: { text: string; taskId?: number }) => Promise<void> | void;
 }
 
 export const ProjectCard = ({
