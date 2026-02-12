@@ -2,7 +2,15 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 import type { Task } from "../../lib/types";
 import type { DateScale } from "../../lib/dateScale";
-import { addMonths, diffInDaysSigned, parseISODate } from "../../lib/dateRange";
+import {
+  addMonths,
+  diffInDaysSigned,
+  parseISODate,
+  endOfMonth,
+  startOfMonth,
+  addDays,
+  formatDayLabel,
+} from "../../lib/dateRange";
 import { GanttBar } from "./GanttBar";
 
 interface GanttRowProps {
@@ -55,24 +63,65 @@ export const GanttRow = ({
     }
   };
 
+  const [previewLabel, setPreviewLabel] = useState<string | null>(null);
+
+  const computeDeltaDaysFromPixels = (delta: number, edge: "start" | "end" | "move") => {
+    if (scale === "week") {
+      const dayPixel = columnWidth / 7;
+      return Math.round(delta / dayPixel);
+    }
+
+    if (scale === "month") {
+      // use the month of the affected edge to compute days-per-pixel
+      const base = parseISODate(edge === "end" ? task.endDate : task.startDate);
+      const monthStart = startOfMonth(base);
+      const daysInMonth = endOfMonth(monthStart).getUTCDate();
+      const dayPixel = columnWidth / daysInMonth;
+      return Math.round(delta / dayPixel);
+    }
+
+    // day scale
+    return Math.round(delta / columnWidth);
+  };
+
+  const updatePreview = (delta: number) => {
+    if (!modeRef.current) {
+      setPreviewLabel(null);
+      return;
+    }
+    const edge = modeRef.current === "move" ? "move" : modeRef.current;
+    const deltaDays = computeDeltaDaysFromPixels(delta, edge as any);
+    if (modeRef.current === "move") {
+      const nextStart = addDays(parseISODate(task.startDate), deltaDays);
+      setPreviewLabel(formatDayLabel(nextStart));
+      return;
+    }
+    if (modeRef.current === "start") {
+      const candidate = addDays(parseISODate(task.startDate), deltaDays);
+      setPreviewLabel(formatDayLabel(candidate));
+      return;
+    }
+    if (modeRef.current === "end") {
+      const candidate = addDays(parseISODate(task.endDate), deltaDays);
+      setPreviewLabel(formatDayLabel(candidate));
+      return;
+    }
+    setPreviewLabel(null);
+  };
+
   const finishDrag = (event: { clientX: number; pointerId: number }, shouldCommit: boolean) => {
     if (pointerIdRef.current !== event.pointerId) {
       return;
     }
     const delta = event.clientX - startXRef.current;
-    const steps = Math.round(delta / columnWidth);
-    let deltaDays = steps * (scale === "week" ? 7 : 1);
-    if (scale === "month" && steps !== 0) {
-      const baseDate = parseISODate(modeRef.current === "start" ? task.startDate : task.endDate);
-      const nextDate = addMonths(baseDate, steps);
-      deltaDays = diffInDaysSigned(baseDate, nextDate);
-    }
+    let deltaDays = computeDeltaDaysFromPixels(delta, modeRef.current === "move" ? "move" : (modeRef.current ?? "move"));
     const mode = modeRef.current;
     setDragOffset(0);
     setDragWidthDelta(0);
     setDragging(false);
     modeRef.current = null;
     pointerIdRef.current = null;
+    setPreviewLabel(null);
     if (shouldCommit && deltaDays !== 0 && mode) {
       if (mode === "move") {
         onMoveTaskDates(task.id, deltaDays);
@@ -114,7 +163,9 @@ export const GanttRow = ({
       return;
     }
     event.preventDefault();
-    applyDelta(event.clientX - startXRef.current);
+    const delta = event.clientX - startXRef.current;
+    applyDelta(delta);
+    updatePreview(delta);
   };
 
   const handlePointerUpLocal = (event: PointerEvent<HTMLDivElement>) => {
@@ -147,7 +198,9 @@ export const GanttRow = ({
         return;
       }
       event.preventDefault();
-      applyDelta(event.clientX - startXRef.current);
+      const delta = event.clientX - startXRef.current;
+      applyDelta(delta);
+      updatePreview(delta);
     };
 
     const handlePointerUp = (event: globalThis.PointerEvent) => {
@@ -179,6 +232,20 @@ export const GanttRow = ({
     }
   }
 
+  const previewLeft = (() => {
+    const mode = modeRef.current;
+    if (mode === "end") return visualOffset + visualWidth;
+    if (mode === "move") return visualOffset + visualWidth / 2;
+    return visualOffset;
+  })();
+
+  const previewTransform = (() => {
+    const mode = modeRef.current;
+    if (mode === "end") return "translateX(-100%)";
+    if (mode === "move") return "translateX(-50%)";
+    return undefined;
+  })();
+
   return (
     <div className="relative" style={{ height: rowHeight }} onPointerDown={handleRowPointerDown}>
       <GanttBar
@@ -195,6 +262,14 @@ export const GanttRow = ({
         onResizeEndPointerDown={handlePointerDown("end")}
         onEdit={() => onEditTask(task)}
       />
+      {dragging && previewLabel && (
+        <div
+          className="absolute -top-6 rounded-md bg-slate-800/90 px-2 py-0.5 text-xs text-slate-100 shadow"
+          style={{ left: previewLeft, transform: previewTransform as any }}
+        >
+          {previewLabel}
+        </div>
+      )}
     </div>
   );
 };

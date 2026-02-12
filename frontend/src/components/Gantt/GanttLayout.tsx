@@ -14,6 +14,7 @@ import {
   parseISODate,
   startOfMonth,
   startOfWeek,
+  endOfMonth,
 } from "../../lib/dateRange";
 import { getAutoScale, getRangeScale } from "../../lib/dateScale";
 import { GanttGrid } from "./GanttGrid";
@@ -132,21 +133,48 @@ export const GanttLayout = ({
     const taskEnd = parseISODate(task.endDate);
 
     if (scale === "week") {
-      const startIndex = Math.floor(diffInDays(rangeStart, startOfWeek(taskStart)) / 7);
-      const endIndex = Math.floor(diffInDays(rangeStart, startOfWeek(taskEnd)) / 7);
-      return {
-        offset: startIndex * columnWidth,
-        width: (endIndex - startIndex + 1) * columnWidth,
-      };
+      const daysFromRangeStartToStart = diffInDays(rangeStart, taskStart);
+      const daysFromRangeStartToEnd = diffInDays(rangeStart, taskEnd);
+      const dayPixel = columnWidth / 7;
+      const offset = daysFromRangeStartToStart * dayPixel;
+      const width = (daysFromRangeStartToEnd - daysFromRangeStartToStart + 1) * dayPixel;
+      return { offset, width };
     }
 
     if (scale === "month") {
-      const startIndex = diffInMonths(rangeStart, startOfMonth(taskStart));
-      const endIndex = diffInMonths(rangeStart, startOfMonth(taskEnd));
-      return {
-        offset: startIndex * columnWidth,
-        width: (endIndex - startIndex + 1) * columnWidth,
-      };
+      const startMonthIndex = diffInMonths(rangeStart, startOfMonth(taskStart));
+      const endMonthIndex = diffInMonths(rangeStart, startOfMonth(taskEnd));
+
+      // compute offset: full months before start + fraction of the start month
+      const startMonthDate = startOfMonth(taskStart);
+      const daysInStartMonth = endOfMonth(startMonthDate).getUTCDate();
+      const dayOfStart = taskStart.getUTCDate();
+      const offset = startMonthIndex * columnWidth + ((dayOfStart - 1) / daysInStartMonth) * columnWidth;
+
+      // compute width by summing fractional widths across months
+      let width = 0;
+      if (startMonthIndex === endMonthIndex) {
+        const daysInThisMonth = daysInStartMonth;
+        const dayOfEnd = taskEnd.getUTCDate();
+        width = ((dayOfEnd - dayOfStart + 1) / daysInThisMonth) * columnWidth;
+      } else {
+        // first partial month
+        const daysRemainingInStart = daysInStartMonth - (dayOfStart - 1);
+        width += (daysRemainingInStart / daysInStartMonth) * columnWidth;
+
+        // middle full months
+        for (let mi = startMonthIndex + 1; mi < endMonthIndex; mi += 1) {
+          width += columnWidth;
+        }
+
+        // last partial month
+        const endMonthDate = startOfMonth(taskEnd);
+        const daysInEndMonth = endOfMonth(endMonthDate).getUTCDate();
+        const dayOfEnd = taskEnd.getUTCDate();
+        width += (dayOfEnd / daysInEndMonth) * columnWidth;
+      }
+
+      return { offset, width };
     }
 
     const startIndex = diffInDays(rangeStart, taskStart);
