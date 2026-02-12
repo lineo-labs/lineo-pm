@@ -71,7 +71,7 @@ Note: Celery is configured for background tasks; the app works without workers r
 
 **License**
 
-Apache License 2.0
+Apache License 3.0
 
 ---
 
