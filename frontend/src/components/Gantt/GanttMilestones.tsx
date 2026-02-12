@@ -10,6 +10,9 @@ import {
   parseISODate,
   startOfMonth,
   startOfWeek,
+  endOfMonth,
+  addDays,
+  formatDayLabel,
 } from "../../lib/dateRange";
 
 interface GanttMilestonesProps {
@@ -49,6 +52,7 @@ const MilestoneLine = ({
 }: MilestoneLineProps) => {
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [previewLabel, setPreviewLabel] = useState<string | null>(null);
   const startXRef = useRef(0);
   const pointerIdRef = useRef<number | null>(null);
 
@@ -57,16 +61,27 @@ const MilestoneLine = ({
       return;
     }
     const delta = event.clientX - startXRef.current;
-    const steps = Math.round(delta / columnWidth);
-    let deltaDays = steps * (scale === "week" ? 7 : 1);
-    if (scale === "month" && steps !== 0) {
-      const baseDate = parseISODate(milestone.targetDate);
-      const nextDate = addMonths(baseDate, steps);
-      deltaDays = diffInDaysSigned(baseDate, nextDate);
-    }
+    const computeDeltaDays = (deltaPx: number) => {
+      if (scale === "week") {
+        const dayPixel = columnWidth / 7;
+        return Math.round(deltaPx / dayPixel);
+      }
+      if (scale === "month") {
+        const base = parseISODate(milestone.targetDate);
+        const monthStart = startOfMonth(base);
+        const daysInMonth = endOfMonth(monthStart).getUTCDate();
+        const dayPixel = columnWidth / daysInMonth;
+        return Math.round(deltaPx / dayPixel);
+      }
+      // day scale
+      return Math.round(deltaPx / columnWidth);
+    };
+
+    const deltaDays = computeDeltaDays(delta);
     setDragOffset(0);
     setDragging(false);
     pointerIdRef.current = null;
+    setPreviewLabel(null);
     if (shouldCommit && deltaDays !== 0) {
       onMoveMilestone(milestone.id, deltaDays);
     }
@@ -86,7 +101,26 @@ const MilestoneLine = ({
       return;
     }
     event.preventDefault();
-    setDragOffset(event.clientX - startXRef.current);
+    const delta = event.clientX - startXRef.current;
+    setDragOffset(delta);
+    // update preview label similar to tasks
+    const computeDeltaDays = (deltaPx: number) => {
+      if (scale === "week") {
+        const dayPixel = columnWidth / 7;
+        return Math.round(deltaPx / dayPixel);
+      }
+      if (scale === "month") {
+        const base = parseISODate(milestone.targetDate);
+        const monthStart = startOfMonth(base);
+        const daysInMonth = endOfMonth(monthStart).getUTCDate();
+        const dayPixel = columnWidth / daysInMonth;
+        return Math.round(deltaPx / dayPixel);
+      }
+      return Math.round(deltaPx / columnWidth);
+    };
+    const deltaDays = computeDeltaDays(delta);
+    const next = addDays(parseISODate(milestone.targetDate), deltaDays);
+    setPreviewLabel(formatDayLabel(next));
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
@@ -119,7 +153,26 @@ const MilestoneLine = ({
         return;
       }
       event.preventDefault();
-      setDragOffset(event.clientX - startXRef.current);
+      const delta = event.clientX - startXRef.current;
+      setDragOffset(delta);
+      // update preview
+      const computeDeltaDays = (deltaPx: number) => {
+        if (scale === "week") {
+          const dayPixel = columnWidth / 7;
+          return Math.round(deltaPx / dayPixel);
+        }
+        if (scale === "month") {
+          const base = parseISODate(milestone.targetDate);
+          const monthStart = startOfMonth(base);
+          const daysInMonth = endOfMonth(monthStart).getUTCDate();
+          const dayPixel = columnWidth / daysInMonth;
+          return Math.round(deltaPx / dayPixel);
+        }
+        return Math.round(deltaPx / columnWidth);
+      };
+      const deltaDays = computeDeltaDays(delta);
+      const next = addDays(parseISODate(milestone.targetDate), deltaDays);
+      setPreviewLabel(formatDayLabel(next));
     };
 
     const handleWindowPointerUp = (event: globalThis.PointerEvent) => {
@@ -155,7 +208,7 @@ const MilestoneLine = ({
       <div className="relative flex h-full flex-col items-center group">
         <div className="mt-1 h-2 w-2 rounded-full bg-amber-400 shadow shadow-amber-500/40" />
         <div className="mt-1 w-px flex-1 bg-amber-400/70" />
-        <div className="pointer-events-none absolute top-2 left-3 z-30 w-52 rounded-md border border-slate-800 bg-slate-950 px-2 py-2 text-[11px] text-slate-200 opacity-0 shadow-lg transition group-hover:opacity-100">
+          <div className="pointer-events-none absolute top-2 left-3 z-30 w-52 rounded-md border border-slate-800 bg-slate-950 px-2 py-2 text-[11px] text-slate-200 opacity-0 shadow-lg transition group-hover:opacity-100">
           <div className="text-xs font-semibold text-slate-100">{milestone.title}</div>
           <div className="mt-1 text-[10px] text-slate-400">
             {formatMilestoneDate(milestone.targetDate)}
@@ -164,6 +217,14 @@ const MilestoneLine = ({
             <div className="mt-1 text-[11px] text-slate-300">{milestone.description}</div>
           )}
         </div>
+          {dragging && previewLabel && (
+            <div
+              className="absolute -top-8 z-40 rounded-md bg-slate-800/90 px-2 py-0.5 text-xs text-slate-100 shadow"
+              style={{ left: dragOffset > 0 ? "100%" : "0%", transform: dragOffset > 0 ? "translateX(-100%)" : undefined }}
+            >
+              {previewLabel}
+            </div>
+          )}
       </div>
     </div>
   );
@@ -180,18 +241,24 @@ export const GanttMilestones = ({
 }: GanttMilestonesProps) => {
   const getMilestoneOffset = (value: string) => {
     const date = parseISODate(value);
-
     if (scale === "week") {
-      const startIndex = Math.floor(diffInDays(rangeStart, startOfWeek(date)) / 7);
-      return startIndex * columnWidth + columnWidth / 2;
+      const daysFromRangeStart = diffInDays(rangeStart, date);
+      const dayPixel = columnWidth / 7;
+      // center inside the day cell
+      return daysFromRangeStart * dayPixel + dayPixel / 2;
     }
 
     if (scale === "month") {
-      const startIndex = diffInMonths(rangeStart, startOfMonth(date));
-      return startIndex * columnWidth + columnWidth / 2;
+      const monthIndex = diffInMonths(rangeStart, startOfMonth(date));
+      const monthStart = startOfMonth(date);
+      const daysInMonth = endOfMonth(monthStart).getUTCDate();
+      const dayOfMonth = date.getUTCDate();
+      const fraction = (dayOfMonth - 1 + 0.5) / daysInMonth; // center of the day
+      return monthIndex * columnWidth + fraction * columnWidth;
     }
 
     const startIndex = diffInDays(rangeStart, date);
+    // center inside the day column
     return startIndex * columnWidth + columnWidth / 2;
   };
 
