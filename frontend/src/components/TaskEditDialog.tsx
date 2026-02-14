@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { Task, TaskStatus } from "../lib/types";
+import { fetchPossibleDependencies, fetchRelations, getAllTasks } from "../lib/api";
 import { DateRangePicker } from "./DateRangePicker";
+import MultiSelectDropdown from "./MultiSelectDropdown";
 
 interface TaskEditDialogProps {
   task: Task | null;
@@ -14,8 +16,10 @@ interface TaskEditDialogProps {
     status: TaskStatus;
     startDate: string;
     endDate: string;
+    dependencies?: number[];
   }) => void;
   onDelete: (taskId: number) => Promise<void> | void;
+  onDependencyChange?: (taskId: number, dependencies: number[]) => Promise<void> | void;
 }
 
 export const TaskEditDialog = ({
@@ -25,6 +29,7 @@ export const TaskEditDialog = ({
   onCreateUpdate,
   onSave,
   onDelete,
+  onDependencyChange,
 }: TaskEditDialogProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -32,6 +37,9 @@ export const TaskEditDialog = ({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [updateText, setUpdateText] = useState("");
+  const [possibleTasks, setPossibleTasks] = useState<Task[]>([]);
+  const [selectedDependencies, setSelectedDependencies] = useState<number[]>([]);
+  const [depsOpen, setDepsOpen] = useState(false);
 
   useEffect(() => {
     if (!task) {
@@ -43,7 +51,147 @@ export const TaskEditDialog = ({
     setStartDate(task.startDate);
     setEndDate(task.endDate);
     setUpdateText("");
+    setSelectedDependencies(task.dependencies ?? []);
+
+    // fetch possible dependency candidates and existing relations concurrently,
+    // but tolerate failures by falling back to all tasks.
+    (async () => {
+      const [candRes, allRes, relsRes] = await Promise.allSettled([
+        fetchPossibleDependencies(task.id, "both"),
+        getAllTasks(task.projectId),
+        fetchRelations(task.projectId),
+      ]);
+
+      const candidates: Task[] = candRes.status === "fulfilled" ? candRes.value : [];
+      const allTasks: Task[] = allRes.status === "fulfilled" ? allRes.value : [];
+      const rels: any[] = relsRes.status === "fulfilled" ? relsRes.value : [];
+
+      // build sets from relations: predecessors (source -> this) and related (both ways)
+      const predecessorIds = new Set<number>();
+      const relatedIds = new Set<number>();
+      rels.forEach((r) => {
+        if (r.source_task_id === task.id) {
+          relatedIds.add(r.destination_task_id);
+        }
+        if (r.destination_task_id === task.id) {
+          // predecessor: another task -> this task
+          relatedIds.add(r.source_task_id);
+          predecessorIds.add(r.source_task_id);
+        }
+      });
+
+      const relatedTasks = allTasks.filter((t) => relatedIds.has(t.id));
+
+      // if both candidates and relatedTasks are empty, fallback to show all other tasks
+      let finalTasks: Task[] = [];
+      if (candidates.length > 0 || relatedTasks.length > 0) {
+        const map = new Map<number, Task>();
+        candidates.forEach((c) => map.set(c.id, c));
+        relatedTasks.forEach((c) => map.set(c.id, c));
+
+        // ensure any explicit dependencies from task.dependencies are included
+        (task.dependencies ?? []).forEach((depId) => {
+          if (!map.has(depId)) {
+            const found = allTasks.find((t) => t.id === depId);
+            if (found) map.set(found.id, found);
+          }
+        });
+
+        finalTasks = Array.from(map.values());
+      } else if (allTasks.length > 0) {
+        finalTasks = allTasks.filter((t) => t.id !== task.id);
+      } else {
+        finalTasks = [];
+      }
+
+      // sort options by id ascending
+      finalTasks.sort((a, b) => a.id - b.id);
+
+      setPossibleTasks(finalTasks);
+
+      // ensure selectedDependencies includes predecessors and task.dependencies
+      const preDeps = new Set<number>(task.dependencies ?? []);
+      predecessorIds.forEach((id) => preDeps.add(id));
+
+      // Only keep selected ids that are present in the final options
+      const finalIds = new Set(finalTasks.map((t) => t.id));
+      const filteredSelected = Array.from(preDeps).filter((id) => finalIds.has(id));
+
+      setSelectedDependencies(filteredSelected);
+    })();
   }, [task]);
+
+  // fetch possibleTasks + relations when deps dropdown is opened
+  useEffect(() => {
+    if (!depsOpen || !task) return;
+
+    (async () => {
+      const [candRes, allRes, relsRes] = await Promise.allSettled([
+        fetchPossibleDependencies(task.id, "both"),
+        getAllTasks(task.projectId),
+        fetchRelations(task.projectId),
+      ]);
+
+      const candidates: Task[] = candRes.status === "fulfilled" ? candRes.value : [];
+      const allTasks: Task[] = allRes.status === "fulfilled" ? allRes.value : [];
+      const rels: any[] = relsRes.status === "fulfilled" ? relsRes.value : [];
+
+      // build sets from relations: predecessors (source -> this) and related (both ways)
+      const predecessorIds = new Set<number>();
+      const relatedIds = new Set<number>();
+      rels.forEach((r) => {
+        if (r.source_task_id === task.id) {
+          relatedIds.add(r.destination_task_id);
+        }
+        if (r.destination_task_id === task.id) {
+          // predecessor: another task -> this task
+          relatedIds.add(r.source_task_id);
+          predecessorIds.add(r.source_task_id);
+        }
+      });
+
+      const relatedTasks = allTasks.filter((t) => relatedIds.has(t.id));
+
+      // if both candidates and relatedTasks are empty, fallback to show all other tasks
+      let finalTasks: Task[] = [];
+      if (candidates.length > 0 || relatedTasks.length > 0) {
+        const map = new Map<number, Task>();
+        candidates.forEach((c) => map.set(c.id, c));
+        relatedTasks.forEach((c) => map.set(c.id, c));
+
+        // ensure any explicit dependencies from task.dependencies are included
+        (task.dependencies ?? []).forEach((depId) => {
+          if (!map.has(depId)) {
+            const found = allTasks.find((t) => t.id === depId);
+            if (found) map.set(found.id, found);
+          }
+        });
+
+        finalTasks = Array.from(map.values());
+      } else if (allTasks.length > 0) {
+        finalTasks = allTasks.filter((t) => t.id !== task.id);
+      } else {
+        finalTasks = [];
+      }
+
+      // sort options by id ascending
+      finalTasks.sort((a, b) => a.id - b.id);
+
+      setPossibleTasks(finalTasks);
+
+      // ensure selectedDependencies includes predecessors and task.dependencies
+      const preDeps = new Set<number>(task.dependencies ?? []);
+      predecessorIds.forEach((id) => preDeps.add(id));
+
+      // Only keep selected ids that are present in the final options
+      const finalIds = new Set(finalTasks.map((t) => t.id));
+      const filteredSelected = Array.from(preDeps).filter((id) => finalIds.has(id));
+
+      setSelectedDependencies(filteredSelected);
+    })();
+  }, [depsOpen, task]);
+
+  // fetching and preselection occur when dropdown opens (see effect below)
 
   const disabled = useMemo(() => !task || !title.trim(), [task, title]);
   const updateDisabled = useMemo(() => !task || !updateText.trim(), [task, updateText]);
@@ -108,6 +256,30 @@ export const TaskEditDialog = ({
             }}
           />
           <div>
+            <div className="flex items-center justify-between">
+              <label onClick={() => setDepsOpen(true)} className="text-xs text-slate-400 cursor-pointer select-none">
+                Depends on
+              </label>
+              <div className="text-xs text-slate-400">Select one or more tasks this task depends on.</div>
+            </div>
+            <div className="mt-1">
+              <MultiSelectDropdown
+                label={selectedDependencies.length === 0 ? "Depends on" : `${selectedDependencies.length} selected`}
+                options={possibleTasks.map((t) => ({ id: t.id, label: t.title }))}
+                selectedIds={selectedDependencies}
+                open={depsOpen}
+                onOpenChange={(v) => setDepsOpen(v)}
+                  hideTrigger={true}
+                onChange={(ids) => {
+                  setSelectedDependencies(ids);
+                  if (task && onDependencyChange) {
+                    void onDependencyChange(task.id, ids);
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <div>
             <label className="text-xs text-slate-400">Status</label>
             <select
               className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
@@ -168,14 +340,15 @@ export const TaskEditDialog = ({
               type="button"
               disabled={disabled}
               onClick={() =>
-                onSave(task.id, {
-                  title: title.trim(),
-                  description: description.trim() || undefined,
-                  status,
-                  startDate,
-                  endDate,
-                })
-              }
+                  onSave(task.id, {
+                    title: title.trim(),
+                    description: description.trim() || undefined,
+                    status,
+                    startDate,
+                    endDate,
+                    dependencies: selectedDependencies,
+                  })
+                }
               className="rounded-md bg-indigo-500 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
             >
               Save

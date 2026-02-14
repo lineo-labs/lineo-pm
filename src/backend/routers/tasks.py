@@ -19,7 +19,28 @@ def list_tasks(
     query = db.query(Task)
     if project_id is not None:
         query = query.filter(Task.project_id == project_id)
-    return query.order_by(Task.order_index.asc()).all()
+    tasks = query.order_by(Task.order_index.asc()).all()
+
+    # include relations as dependencies in the returned Task objects so frontend
+    # sees relations created via the relations endpoints as task.dependencies
+    if tasks:
+        task_ids = [t.id for t in tasks]
+        rels = (
+            db.query(Relation)
+            .filter(Relation.destination_task_id.in_(task_ids))
+            .all()
+        )
+        rel_map: dict[int, list[int]] = {}
+        for r in rels:
+            rel_map.setdefault(r.destination_task_id, []).append(r.source_task_id)
+
+        for t in tasks:
+            existing = set(t.dependencies or [])
+            from_rels = set(rel_map.get(t.id, []))
+            merged = sorted(existing.union(from_rels))
+            t.dependencies = merged
+
+    return tasks
 
 
 @router.post("", response_model=TaskOut, status_code=201)
@@ -66,7 +87,36 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
     if "end_date" in fields_set:
         task.end_date = payload.end_date
     if "dependencies" in fields_set:
+        # update JSON column
         task.dependencies = payload.dependencies
+        # synchronize Relation rows: dependencies list are predecessor task ids
+        # remove existing predecessor relations for this task that are not in the new list
+        existing_rels = (
+            db.query(Relation)
+            .filter(Relation.destination_task_id == task.id)
+            .all()
+        )
+        existing_src_ids = {r.source_task_id for r in existing_rels}
+        new_src_ids = set(payload.dependencies or [])
+
+        # delete relations that are no longer present
+        for r in existing_rels:
+            if r.source_task_id not in new_src_ids:
+                db.delete(r)
+
+        # validate candidate source tasks exist and belong to same project
+        if new_src_ids:
+            tasks_for_src = db.query(Task).filter(Task.id.in_(list(new_src_ids))).all()
+            if len(tasks_for_src) != len(new_src_ids):
+                raise HTTPException(status_code=400, detail="One or more dependency task IDs are invalid")
+            for t_src in tasks_for_src:
+                if t_src.project_id != task.project_id:
+                    raise HTTPException(status_code=400, detail="Dependency tasks must belong to the same project")
+
+        # create missing relations
+        for src_id in new_src_ids - existing_src_ids:
+            rel = Relation(source_task_id=src_id, destination_task_id=task.id, relation_type="FS")
+            db.add(rel)
 
     # commit the direct update first
     db.commit()
@@ -74,7 +124,7 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
 
     updated_ids: list[int] = [task.id]
 
-    # if dates changed, propagate to related tasks (finish-to-start 'fs')
+    # if dates changed, propagate to related tasks (finish-to-start 'FS')
     if "start_date" in fields_set or "end_date" in fields_set:
         propagated = _propagate_date_changes([task.id], db)
         # include origin task as updated
@@ -96,7 +146,7 @@ def _propagate_date_changes(changed_task_ids: list[int], db: Session):
     """Propagate date changes from given tasks to successors via relations.
 
     Rules implemented (supported relation types):
-    - 'fs' (finish-to-start): successor.start_date must be >= predecessor.end_date
+    - 'FS' (finish-to-start): successor.start_date must be >= predecessor.end_date
 
     The propagation is breadth-first and will shift successors forward preserving their duration.
     A safety limit prevents infinite loops / cycles from causing runaway updates.
@@ -150,7 +200,7 @@ def _propagate_date_changes(changed_task_ids: list[int], db: Session):
             if dest_task is None:
                 continue
 
-            if rel_type == "FS":
+            if str(rel_type).lower() == "fs":
                 # require concrete dates to compare/shift
                 if src_task.end_date is None or dest_task.start_date is None or dest_task.end_date is None:
                     continue

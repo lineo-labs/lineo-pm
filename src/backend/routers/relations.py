@@ -38,8 +38,8 @@ def list_relations(project_id: int | None = Query(default=None), db: Session = D
 
 @router.post("", response_model=RelationOut, status_code=201)
 def create_relation(payload: RelationCreate, db: Session = Depends(get_db)):
-    if payload.relation_type != "fs":
-        raise HTTPException(status_code=400, detail="Only 'fs' relation_type is supported")
+    if payload.relation_type != "FS":
+        raise HTTPException(status_code=400, detail="Only 'FS' relation_type is supported")
 
     # validate tasks exist and belong to the same project
     task_ids = [payload.source_task_id, payload.destination_task_id]
@@ -82,8 +82,8 @@ def update_relation(id_relation: int, payload: RelationUpdate, db: Session = Dep
     if "destination_task_id" in fields_set:
         rel.destination_task_id = payload.destination_task_id
     if "relation_type" in fields_set:
-        if payload.relation_type != "fs":
-            raise HTTPException(status_code=400, detail="Only 'fs' relation_type is supported")
+        if payload.relation_type != "FS":
+            raise HTTPException(status_code=400, detail="Only 'FS' relation_type is supported")
         rel.relation_type = payload.relation_type
 
     # if task ids or project changed, validate consistency
@@ -108,6 +108,17 @@ def update_relation(id_relation: int, payload: RelationUpdate, db: Session = Dep
         destination_task_id=rel.destination_task_id,
         relation_type=rel.relation_type,
     )
+
+
+
+@router.delete("/{id_relation}", status_code=204)
+def delete_relation(id_relation: int, db: Session = Depends(get_db)):
+    rel = db.query(Relation).filter(Relation.id_relation == id_relation).first()
+    if not rel:
+        raise HTTPException(status_code=404, detail="Relation not found")
+    db.delete(rel)
+    db.commit()
+    return None
 
 
 def _build_adjacency(task_ids: list[int], rels: list[Relation]) -> dict[int, list[int]]:

@@ -185,6 +185,8 @@ export const GanttLayout = ({
     };
   };
 
+  const taskMap = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
+
   const handleRowDragStart = (taskId: number, event: PointerEvent<Element>) => {
     const index = tasks.findIndex((task) => task.id === taskId);
     if (index < 0) {
@@ -344,6 +346,7 @@ export const GanttLayout = ({
                   position={getTaskPosition(task)}
                   columnWidth={columnWidth}
                   scale={scale}
+                  taskMap={taskMap}
                   onAdjustTaskDates={onAdjustTaskDates}
                   onMoveTaskDates={onMoveTaskDates}
                   onEditTask={onEditTask}

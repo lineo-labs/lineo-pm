@@ -123,6 +123,13 @@ export const fetchTasks = async (projectId: number) => {
   return data.map(toTask);
 };
 
+export const getAllTasks = async (projectId?: number) => {
+  const url = projectId ? `${API_BASE}/tasks?project_id=${projectId}` : `${API_BASE}/tasks`;
+  const response = await fetch(url);
+  const data = await handleResponse<TaskDto[]>(response);
+  return data.map(toTask);
+};
+
 export const createTask = async (payload: {
   projectId: number;
   title: string;
@@ -177,8 +184,31 @@ export const updateTask = async (
       dependencies: payload.dependencies,
     }),
   });
-  const data = await handleResponse<TaskDto>(response);
-  return toTask(data);
+  // backend returns a list of updated tasks (propagations included)
+  const data = await handleResponse<TaskDto[]>(response);
+  return data.map(toTask);
+};
+
+export const fetchPossibleDependencies = async (
+  taskId: number,
+  direction: "predecessors" | "successors" | "both" = "both"
+) => {
+  const response = await fetch(`${API_BASE}/relations/possible?task_id=${taskId}&direction=${direction}`);
+  const data = await handleResponse<TaskDto[]>(response);
+  return data.map(toTask);
+};
+
+export const fetchRelations = async (projectId?: number) => {
+  const url = projectId ? `${API_BASE}/relations?project_id=${projectId}` : `${API_BASE}/relations`;
+  const response = await fetch(url);
+  const data = await handleResponse<{
+    id_relation: number;
+    project_id: number | null;
+    source_task_id: number;
+    destination_task_id: number;
+    relation_type: string;
+  }[]>(response);
+  return data;
 };
 
 export const reorderTasks = async (orderedIds: number[]) => {

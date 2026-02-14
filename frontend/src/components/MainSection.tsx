@@ -38,6 +38,7 @@ interface MainSectionProps {
     status: TaskStatus;
     startDate: string;
     endDate: string;
+    dependencies?: number[];
   }) => Promise<void> | void;
   onDeleteTask: (taskId: number) => Promise<void> | void;
   onAdjustTaskDates: (taskId: number, mode: "start" | "end", deltaDays: number) => Promise<void> | void;
@@ -127,6 +128,20 @@ export const MainSection = ({
         onSave={(taskId, payload) => {
           onUpdateTask(taskId, payload);
           setEditingTask(null);
+        }}
+        onDependencyChange={(taskId, dependencies) => {
+          const source = tasks.find((t) => t.id === taskId) ?? editingTask;
+          if (!source) {
+            return;
+          }
+          onUpdateTask(taskId, {
+            title: source.title,
+            description: source.description,
+            status: source.status,
+            startDate: source.startDate,
+            endDate: source.endDate,
+            dependencies,
+          });
         }}
         onDelete={async (taskId) => {
           await onDeleteTask(taskId);

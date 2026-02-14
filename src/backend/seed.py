@@ -51,7 +51,7 @@ def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
             start_date=today - timedelta(days=5),
             end_date=today - timedelta(days=3),
             order_index=2,
-            dependencies=[1],
+            dependencies=[],
         ),
         Task(
             project_id=project_id,
@@ -61,7 +61,7 @@ def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
             start_date=today - timedelta(days=2),
             end_date=today + timedelta(days=2),
             order_index=3,
-            dependencies=[2],
+            dependencies=[],
         ),
         Task(
             project_id=project_id,
@@ -71,7 +71,7 @@ def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
             start_date=today + timedelta(days=2),
             end_date=today + timedelta(days=7),
             order_index=4,
-            dependencies=[3],
+            dependencies=[],
         ),
         Task(
             project_id=project_id,
@@ -81,7 +81,7 @@ def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
             start_date=today + timedelta(days=6),
             end_date=today + timedelta(days=12),
             order_index=5,
-            dependencies=[4],
+            dependencies=[],
         ),
     ]
     db.add_all(tasks)

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Literal
 
 from pydantic import BaseModel, Field
 
@@ -7,7 +7,7 @@ class RelationBase(BaseModel):
     project_id: int
     source_task_id: int
     destination_task_id: int
-    relation_type: str = Field("fs", min_length=1, max_length=16)
+    relation_type: Literal["FS"] = "FS" # only "Finish to Start" supported for now
 
 
 class RelationCreate(RelationBase):
@@ -18,7 +18,7 @@ class RelationUpdate(BaseModel):
     project_id: Optional[int] = None
     source_task_id: Optional[int] = None
     destination_task_id: Optional[int] = None
-    relation_type: Optional[str] = None
+    relation_type: Optional[Literal["FS"]] = None
 
 
 class RelationOut(RelationBase):

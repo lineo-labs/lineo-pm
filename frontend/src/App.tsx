@@ -12,7 +12,7 @@ import {
   deleteMilestone,
   fetchMilestones,
   fetchProjects,
-  fetchTasks,
+  getAllTasks,
   fetchUpdates,
   reorderTasks,
   updateMilestone,
@@ -66,7 +66,7 @@ export const App = () => {
       return;
     }
     let active = true;
-    fetchTasks(selectedProjectId)
+    getAllTasks(selectedProjectId)
       .then((data) => {
         if (!active) {
           return;
@@ -232,15 +232,17 @@ export const App = () => {
       status: TaskStatus;
       startDate: string;
       endDate: string;
+      dependencies?: number[];
     }
   ) => {
     const previous = tasks;
-    setTasks((prev) =>
-      prev.map((task) => (task.id === taskId ? { ...task, ...payload } : task))
-    );
+    // minimal optimistic update
+    setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, ...payload } : task)));
     try {
-      const updated = await updateTask(taskId, payload);
-      setTasks((prev) => prev.map((task) => (task.id === taskId ? updated : task)));
+      await updateTask(taskId, payload);
+      // reload full list from server to get propagated changes
+      const all = selectedProjectId ? await getAllTasks(selectedProjectId) : [];
+      setTasks(all);
       setError(null);
     } catch (err) {
       setTasks(previous);

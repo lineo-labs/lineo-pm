@@ -23,6 +23,7 @@ interface GanttRowProps {
   };
   columnWidth: number;
   scale: DateScale;
+  taskMap: Map<number, Task>;
   onAdjustTaskDates: (taskId: number, mode: "start" | "end", deltaDays: number) => void;
   onMoveTaskDates: (taskId: number, deltaDays: number) => void;
   onEditTask: (task: Task) => void;
@@ -37,12 +38,29 @@ export const GanttRow = ({
   position,
   columnWidth,
   scale,
+  taskMap,
   onAdjustTaskDates,
   onMoveTaskDates,
   onEditTask,
   onRowDragStart,
   isRowDragging,
 }: GanttRowProps) => {
+  // helper: compute the maximum end date among predecessors (dependencies)
+  const getMaxPredecessorEnd = () => {
+    if (!task.dependencies || task.dependencies.length === 0) {
+      return null;
+    }
+    let maxDate: Date | null = null;
+    for (const pid of task.dependencies) {
+      const pred = (taskMap as Map<number, Task>).get(pid as number);
+      if (!pred) continue;
+      const predEnd = parseISODate(pred.endDate);
+      if (!maxDate || predEnd.getTime() > maxDate.getTime()) {
+        maxDate = predEnd;
+      }
+    }
+    return maxDate;
+  };
   const [dragOffset, setDragOffset] = useState(0);
   const [dragWidthDelta, setDragWidthDelta] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -90,7 +108,18 @@ export const GanttRow = ({
       return;
     }
     const edge = modeRef.current === "move" ? "move" : modeRef.current;
-    const deltaDays = computeDeltaDaysFromPixels(delta, edge as any);
+    let deltaDays = computeDeltaDaysFromPixels(delta, edge as any);
+    // enforce dependency constraint: start cannot become earlier than predecessor end
+    if (modeRef.current === "move" || modeRef.current === "start") {
+      const maxPredEnd = getMaxPredecessorEnd();
+      if (maxPredEnd) {
+        const currentStart = parseISODate(task.startDate);
+        const minDelta = diffInDaysSigned(currentStart, maxPredEnd);
+        if (deltaDays < minDelta) {
+          deltaDays = minDelta;
+        }
+      }
+    }
     if (modeRef.current === "move") {
       const nextStart = addDays(parseISODate(task.startDate), deltaDays);
       setPreviewLabel(formatDayLabel(nextStart));
@@ -115,6 +144,17 @@ export const GanttRow = ({
     }
     const delta = event.clientX - startXRef.current;
     let deltaDays = computeDeltaDaysFromPixels(delta, modeRef.current === "move" ? "move" : (modeRef.current ?? "move"));
+    // clamp deltaDays so start won't move before predecessor end (if any)
+    if ((modeRef.current === "move" || modeRef.current === "start") && deltaDays !== 0) {
+      const maxPredEnd = getMaxPredecessorEnd();
+      if (maxPredEnd) {
+        const currentStart = parseISODate(task.startDate);
+        const minDelta = diffInDaysSigned(currentStart, maxPredEnd);
+        if (deltaDays < minDelta) {
+          deltaDays = minDelta;
+        }
+      }
+    }
     const mode = modeRef.current;
     setDragOffset(0);
     setDragWidthDelta(0);
