@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from backend.db.database import get_db
 from backend.db.models.relation import Relation
 from backend.db.models.task import Task
-from backend.schemas.relation import RelationOut, RelationCreate, RelationUpdate
+from backend.schemas.relation import RelationOut, RelationCreate, RelationUpdate, PossibleRelationsOut
 from backend.schemas.task import TaskOut
 
 router = APIRouter(prefix="/relations", tags=["relations"])
@@ -141,7 +141,7 @@ def _dfs(start: int, adj: dict[int, list[int]]) -> set[int]:
     return seen
 
 
-@router.get("/possible", response_model=list[TaskOut])
+@router.get("/possible", response_model=PossibleRelationsOut)
 def possible_dependencies(
     task_id: int | None = Query(default=None),
     direction: str = Query(default="predecessors"),
@@ -149,8 +149,11 @@ def possible_dependencies(
 ):
     """Return tasks in the same project that can be linked to `task_id`.
 
-    `direction` can be `predecessors` (candidate -> task_id),
-    `successors` (task_id -> candidate) or `both`.
+    NOTE: this endpoint returns only candidates that can be linked as
+    predecessors (i.e. candidate -> task_id) in the `possible` list.
+
+    The `active` list contains only existing relations where the
+    destination is `task_id` (i.e. active predecessors -> task_id).
 
     The endpoint excludes:
     - the task itself
@@ -198,38 +201,18 @@ def possible_dependencies(
         if cand.id == task_id:
             continue
 
+        # Only include candidates that are allowed to be predecessors
+        # (candidate -> task_id). We intentionally ignore successor
+        # candidacy here — the frontend expects predecessors only.
         allowed_as_pred = True
-        allowed_as_succ = True
-
-        # candidate -> task_id (predecessor)
         if cand.id in existing_sources_to_task:
             allowed_as_pred = False
-        # if task can reach candidate, adding candidate -> task would create a cycle or inverse
         if cand.id in reachable_from_task:
             allowed_as_pred = False
-        # avoid direct opposite (task -> candidate already exists)
         if cand.id in existing_dest_from_task:
             allowed_as_pred = False
 
-        # task_id -> candidate (successor)
-        if cand.id in existing_dest_from_task:
-            allowed_as_succ = False
-        # if candidate can reach task, adding task -> candidate would create a cycle
-        if cand.id in nodes_reaching_task:
-            allowed_as_succ = False
-        # avoid direct opposite
-        if cand.id in existing_sources_to_task:
-            allowed_as_succ = False
-
-        take = False
-        if direction == "predecessors" and allowed_as_pred:
-            take = True
-        if direction == "successors" and allowed_as_succ:
-            take = True
-        if direction == "both" and (allowed_as_pred or allowed_as_succ):
-            take = True
-
-        if take:
+        if allowed_as_pred:
             out.append(
                 TaskOut(
                     id=cand.id,
@@ -244,4 +227,22 @@ def possible_dependencies(
                 )
             )
 
-    return out
+    # build active relations list: only relations that are predecessors
+    # to the given task (source -> task_id)
+    active: list[RelationOut] = []
+    for r in rels:
+        if r.destination_task_id != task_id:
+            continue
+        src = db.get(Task, r.source_task_id)
+        project_id_val = src.project_id if src is not None else None
+        active.append(
+            RelationOut(
+                id_relation=r.id_relation,
+                project_id=project_id_val,
+                source_task_id=r.source_task_id,
+                destination_task_id=r.destination_task_id,
+                relation_type=r.relation_type,
+            )
+        )
+
+    return PossibleRelationsOut(possible=out, active=active)

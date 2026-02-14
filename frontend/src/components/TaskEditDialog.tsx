@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { Task, TaskStatus } from "../lib/types";
-import { fetchPossibleDependencies, fetchRelations, getAllTasks } from "../lib/api";
+import { fetchPossibleDependencies, getAllTasks } from "../lib/api";
 import { DateRangePicker } from "./DateRangePicker";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 
@@ -51,45 +51,41 @@ export const TaskEditDialog = ({
     setStartDate(task.startDate);
     setEndDate(task.endDate);
     setUpdateText("");
-    setSelectedDependencies(task.dependencies ?? []);
+    setSelectedDependencies([]);
 
-    // fetch possible dependency candidates and existing relations concurrently,
-    // but tolerate failures by falling back to all tasks.
     (async () => {
-      const [candRes, allRes, relsRes] = await Promise.allSettled([
-        fetchPossibleDependencies(task.id, "both"),
-        getAllTasks(task.projectId),
-        fetchRelations(task.projectId),
-      ]);
+      try {
+        const [resRes, allRes] = await Promise.allSettled([
+          fetchPossibleDependencies(task.id, "predecessors"),
+          getAllTasks(task.projectId),
+        ]);
 
-      const candidates: Task[] = candRes.status === "fulfilled" ? candRes.value : [];
-      const allTasks: Task[] = allRes.status === "fulfilled" ? allRes.value : [];
-      const rels: any[] = relsRes.status === "fulfilled" ? relsRes.value : [];
+        const possibleRaw: any[] =
+          resRes.status === "fulfilled" && Array.isArray(resRes.value.possible) ? resRes.value.possible : [];
+        const activeRaw: any[] =
+          resRes.status === "fulfilled" && Array.isArray(resRes.value.active) ? resRes.value.active : [];
+        const allTasks: Task[] = allRes.status === "fulfilled" ? allRes.value : [];
 
-      // build sets from relations: predecessors (source -> this) and related (both ways)
-      const predecessorIds = new Set<number>();
-      const relatedIds = new Set<number>();
-      rels.forEach((r) => {
-        if (r.source_task_id === task.id) {
-          relatedIds.add(r.destination_task_id);
-        }
-        if (r.destination_task_id === task.id) {
-          // predecessor: another task -> this task
-          relatedIds.add(r.source_task_id);
-          predecessorIds.add(r.source_task_id);
-        }
-      });
+        const possibleMapped: Task[] = possibleRaw.map((p: any) => ({
+          id: p.id,
+          projectId: p.projectId,
+          title: p.title,
+          description: p.description,
+          status: p.status,
+          startDate: p.startDate,
+          endDate: p.endDate,
+          dependencies: p.dependencies ?? [],
+          orderIndex: p.orderIndex,
+        }));
 
-      const relatedTasks = allTasks.filter((t) => relatedIds.has(t.id));
+        // map active relations' source_task_id to Task objects using allTasks
+        const activeSourceIds = new Set<number>(activeRaw.map((a: any) => a.source_task_id));
+        const activeTasks: Task[] = allTasks.filter((t) => activeSourceIds.has(t.id));
 
-      // if both candidates and relatedTasks are empty, fallback to show all other tasks
-      let finalTasks: Task[] = [];
-      if (candidates.length > 0 || relatedTasks.length > 0) {
+        // merge possible + active + any explicit dependencies present in allTasks
         const map = new Map<number, Task>();
-        candidates.forEach((c) => map.set(c.id, c));
-        relatedTasks.forEach((c) => map.set(c.id, c));
-
-        // ensure any explicit dependencies from task.dependencies are included
+        possibleMapped.forEach((t) => map.set(t.id, t));
+        activeTasks.forEach((t) => map.set(t.id, t));
         (task.dependencies ?? []).forEach((depId) => {
           if (!map.has(depId)) {
             const found = allTasks.find((t) => t.id === depId);
@@ -97,27 +93,18 @@ export const TaskEditDialog = ({
           }
         });
 
-        finalTasks = Array.from(map.values());
-      } else if (allTasks.length > 0) {
-        finalTasks = allTasks.filter((t) => t.id !== task.id);
-      } else {
-        finalTasks = [];
+        const finalTasks = Array.from(map.values()).sort((a, b) => a.id - b.id);
+
+        setPossibleTasks(finalTasks);
+
+        // only keep pre-existing dependencies that are present in final options
+        const possibleIds = new Set(finalTasks.map((t) => t.id));
+        const filteredSelected = (task.dependencies ?? []).filter((id) => possibleIds.has(id));
+        setSelectedDependencies(filteredSelected);
+      } catch (err) {
+        setPossibleTasks([]);
+        setSelectedDependencies([]);
       }
-
-      // sort options by id ascending
-      finalTasks.sort((a, b) => a.id - b.id);
-
-      setPossibleTasks(finalTasks);
-
-      // ensure selectedDependencies includes predecessors and task.dependencies
-      const preDeps = new Set<number>(task.dependencies ?? []);
-      predecessorIds.forEach((id) => preDeps.add(id));
-
-      // Only keep selected ids that are present in the final options
-      const finalIds = new Set(finalTasks.map((t) => t.id));
-      const filteredSelected = Array.from(preDeps).filter((id) => finalIds.has(id));
-
-      setSelectedDependencies(filteredSelected);
     })();
   }, [task]);
 
@@ -126,68 +113,48 @@ export const TaskEditDialog = ({
     if (!depsOpen || !task) return;
 
     (async () => {
-      const [candRes, allRes, relsRes] = await Promise.allSettled([
-        fetchPossibleDependencies(task.id, "both"),
-        getAllTasks(task.projectId),
-        fetchRelations(task.projectId),
-      ]);
+      try {
+        const [resRes, allRes] = await Promise.allSettled([
+          fetchPossibleDependencies(task.id, "predecessors"),
+          getAllTasks(task.projectId),
+        ]);
 
-      const candidates: Task[] = candRes.status === "fulfilled" ? candRes.value : [];
-      const allTasks: Task[] = allRes.status === "fulfilled" ? allRes.value : [];
-      const rels: any[] = relsRes.status === "fulfilled" ? relsRes.value : [];
+        const possibleRaw: any[] =
+          resRes.status === "fulfilled" && Array.isArray(resRes.value.possible) ? resRes.value.possible : [];
+        const activeRaw: any[] =
+          resRes.status === "fulfilled" && Array.isArray(resRes.value.active) ? resRes.value.active : [];
+        const allTasks: Task[] = allRes.status === "fulfilled" ? allRes.value : [];
 
-      // build sets from relations: predecessors (source -> this) and related (both ways)
-      const predecessorIds = new Set<number>();
-      const relatedIds = new Set<number>();
-      rels.forEach((r) => {
-        if (r.source_task_id === task.id) {
-          relatedIds.add(r.destination_task_id);
-        }
-        if (r.destination_task_id === task.id) {
-          // predecessor: another task -> this task
-          relatedIds.add(r.source_task_id);
-          predecessorIds.add(r.source_task_id);
-        }
-      });
+        const possibleMapped: Task[] = possibleRaw.map((p: any) => ({
+          id: p.id,
+          projectId: p.projectId,
+          title: p.title,
+          description: p.description,
+          status: p.status,
+          startDate: p.startDate,
+          endDate: p.endDate,
+          dependencies: p.dependencies ?? [],
+          orderIndex: p.orderIndex,
+        }));
 
-      const relatedTasks = allTasks.filter((t) => relatedIds.has(t.id));
+        const activeSourceIds = new Set<number>(activeRaw.map((a: any) => a.source_task_id));
+        const activeTasks: Task[] = allTasks.filter((t) => activeSourceIds.has(t.id));
 
-      // if both candidates and relatedTasks are empty, fallback to show all other tasks
-      let finalTasks: Task[] = [];
-      if (candidates.length > 0 || relatedTasks.length > 0) {
         const map = new Map<number, Task>();
-        candidates.forEach((c) => map.set(c.id, c));
-        relatedTasks.forEach((c) => map.set(c.id, c));
+        possibleMapped.forEach((t) => map.set(t.id, t));
+        activeTasks.forEach((t) => map.set(t.id, t));
 
-        // ensure any explicit dependencies from task.dependencies are included
-        (task.dependencies ?? []).forEach((depId) => {
-          if (!map.has(depId)) {
-            const found = allTasks.find((t) => t.id === depId);
-            if (found) map.set(found.id, found);
-          }
-        });
+        const finalTasks = Array.from(map.values()).sort((a, b) => a.id - b.id);
 
-        finalTasks = Array.from(map.values());
-      } else if (allTasks.length > 0) {
-        finalTasks = allTasks.filter((t) => t.id !== task.id);
-      } else {
-        finalTasks = [];
+        setPossibleTasks(finalTasks);
+
+        const possibleIds = new Set(finalTasks.map((t) => t.id));
+        const filteredSelected = (task.dependencies ?? []).filter((id) => possibleIds.has(id));
+        setSelectedDependencies(filteredSelected);
+      } catch (err) {
+        setPossibleTasks([]);
+        setSelectedDependencies([]);
       }
-
-      // sort options by id ascending
-      finalTasks.sort((a, b) => a.id - b.id);
-
-      setPossibleTasks(finalTasks);
-
-      // ensure selectedDependencies includes predecessors and task.dependencies
-      const preDeps = new Set<number>(task.dependencies ?? []);
-      predecessorIds.forEach((id) => preDeps.add(id));
-
-      // Only keep selected ids that are present in the final options
-      const finalIds = new Set(finalTasks.map((t) => t.id));
-      const filteredSelected = Array.from(preDeps).filter((id) => finalIds.has(id));
-
-      setSelectedDependencies(filteredSelected);
     })();
   }, [depsOpen, task]);
 

@@ -26,3 +26,15 @@ class RelationOut(RelationBase):
 
     class Config:
         from_attributes = True
+
+
+# Response model for /relations/possible endpoint
+from backend.schemas.task import TaskOut
+
+
+class PossibleRelationsOut(BaseModel):
+    possible: list[TaskOut]
+    active: list[RelationOut]
+
+    class Config:
+        from_attributes = True

@@ -191,11 +191,24 @@ export const updateTask = async (
 
 export const fetchPossibleDependencies = async (
   taskId: number,
-  direction: "predecessors" | "successors" | "both" = "both"
+  direction: "predecessors" = "predecessors"
 ) => {
   const response = await fetch(`${API_BASE}/relations/possible?task_id=${taskId}&direction=${direction}`);
-  const data = await handleResponse<TaskDto[]>(response);
-  return data.map(toTask);
+  const data = await handleResponse<{
+    possible: TaskDto[];
+    active: {
+      id_relation: number;
+      project_id: number | null;
+      source_task_id: number;
+      destination_task_id: number;
+      relation_type: string;
+    }[];
+  }>(response);
+
+  return {
+    possible: data.possible.map(toTask),
+    active: data.active,
+  };
 };
 
 export const fetchRelations = async (projectId?: number) => {
