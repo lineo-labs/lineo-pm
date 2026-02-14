@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 
 from backend.db.database import get_db
 from backend.db.models.task import Task
+from backend.db.models.relation import Relation
+from collections import deque
 from backend.schemas.task import TaskCreate, TaskOut, TaskReorder, TaskUpdate
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -44,7 +46,7 @@ def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
     return task
 
 
-@router.put("/{task_id}", response_model=TaskOut)
+@router.put("/{task_id}", response_model=list[TaskOut])
 def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
@@ -66,9 +68,118 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
     if "dependencies" in fields_set:
         task.dependencies = payload.dependencies
 
+    # commit the direct update first
     db.commit()
     db.refresh(task)
-    return task
+
+    updated_ids: list[int] = [task.id]
+
+    # if dates changed, propagate to related tasks (finish-to-start 'fs')
+    if "start_date" in fields_set or "end_date" in fields_set:
+        propagated = _propagate_date_changes([task.id], db)
+        # include origin task as updated
+        updated_ids = list({*updated_ids, *propagated})
+
+    db.refresh(task)
+
+    # return full list of updated tasks
+    updated_tasks = (
+        db.query(Task)
+        .filter(Task.id.in_(updated_ids))
+        .order_by(Task.order_index.asc())
+        .all()
+    )
+    return updated_tasks
+
+
+def _propagate_date_changes(changed_task_ids: list[int], db: Session):
+    """Propagate date changes from given tasks to successors via relations.
+
+    Rules implemented (supported relation types):
+    - 'fs' (finish-to-start): successor.start_date must be >= predecessor.end_date
+
+    The propagation is breadth-first and will shift successors forward preserving their duration.
+    A safety limit prevents infinite loops / cycles from causing runaway updates.
+    """
+    if not changed_task_ids:
+        return
+
+    # load all tasks in the same project(s) as changed tasks
+    # collect affected project ids
+    changed_tasks = db.query(Task).filter(Task.id.in_(changed_task_ids)).all()
+    project_ids = {t.project_id for t in changed_tasks}
+
+    # nothing to do if no matching changed tasks were found
+    if not project_ids:
+        return
+
+    tasks = db.query(Task).filter(Task.project_id.in_(list(project_ids))).all()
+    task_map: dict[int, Task] = {t.id: t for t in tasks}
+
+    # load relations inside the project(s)
+    rels = (
+        db.query(Relation)
+        .filter(Relation.source_task_id.in_(list(task_map.keys())))
+        .filter(Relation.destination_task_id.in_(list(task_map.keys())))
+        .all()
+    )
+
+    rel_map: dict[int, list[tuple[int, str]]] = {}
+    for r in rels:
+        rel_map.setdefault(r.source_task_id, []).append((r.destination_task_id, r.relation_type))
+
+    # BFS queue seeded with changed tasks
+    q = deque(changed_task_ids)
+    # track how many times we've updated a specific task to detect cycles
+    update_counts: dict[int, int] = {}
+    MAX_UPDATES_PER_TASK = 10
+    MAX_ITERATIONS = 10000
+    iterations = 0
+
+    updated_set: set[int] = set(changed_task_ids)
+
+    while q and iterations < MAX_ITERATIONS:
+        iterations += 1
+        src_id = q.popleft()
+        src_task = task_map.get(src_id)
+        if src_task is None:
+            continue
+
+        for dest_id, rel_type in rel_map.get(src_id, []):
+            dest_task = task_map.get(dest_id)
+            if dest_task is None:
+                continue
+
+            if rel_type == "FS":
+                # require concrete dates to compare/shift
+                if src_task.end_date is None or dest_task.start_date is None or dest_task.end_date is None:
+                    continue
+
+                required_start = src_task.end_date
+                if dest_task.start_date < required_start:
+                    # preserve duration
+                    duration = dest_task.end_date - dest_task.start_date
+                    dest_task.start_date = required_start
+                    dest_task.end_date = required_start + duration
+                    db.add(dest_task)
+                    # count updates for safety
+                    update_counts[dest_id] = update_counts.get(dest_id, 0) + 1
+                    updated_set.add(dest_id)
+                    if update_counts[dest_id] > MAX_UPDATES_PER_TASK:
+                        # abort propagation to avoid infinite loops
+                        raise HTTPException(status_code=400, detail=f"Cycle or excessive updates detected while propagating dates (task {dest_id})")
+                    # enqueue successor to propagate further
+                    q.append(dest_id)
+            else:
+                # unknown relation type: ignore for now
+                continue
+
+    if iterations >= MAX_ITERATIONS:
+        raise HTTPException(status_code=400, detail="Exceeded maximum propagation iterations (possible cycle)")
+
+    # persist all adjusted tasks
+    db.commit()
+    return list(updated_set)
 
 
 @router.delete("/{task_id}", status_code=204)
