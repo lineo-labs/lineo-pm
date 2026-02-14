@@ -9,12 +9,12 @@ import {
   formatWeekLabel,
   getDateColumns,
   getMonthColumns,
-  getTaskRange,
   getWeekColumns,
   parseISODate,
   startOfMonth,
   startOfWeek,
   endOfMonth,
+  addDays,
 } from "../../lib/dateRange";
 import { getAutoScale, getRangeScale } from "../../lib/dateScale";
 import { GanttGrid } from "./GanttGrid";
@@ -82,9 +82,6 @@ export const GanttLayout = ({
   }, []);
 
   const { start, end } = useMemo(() => {
-    if (tasks.length === 0 && milestones.length === 0) {
-      return getTaskRange([]);
-    }
     const dates: Date[] = [];
     tasks.forEach((task) => {
       dates.push(parseISODate(task.startDate));
@@ -93,9 +90,17 @@ export const GanttLayout = ({
     milestones.forEach((milestone) => {
       dates.push(parseISODate(milestone.targetDate));
     });
-    const start = new Date(Math.min(...dates.map((date) => date.getTime())));
-    const end = new Date(Math.max(...dates.map((date) => date.getTime())));
-    return { start, end };
+
+    if (dates.length === 0) {
+      const today = new Date();
+      const s = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+      return { start: s, end: addDays(s, 14) };
+    }
+
+    const rawStart = new Date(Math.min(...dates.map((date) => date.getTime())));
+    const rawEnd = new Date(Math.max(...dates.map((date) => date.getTime())));
+    // always pad two days before start and two days after end
+    return { start: addDays(rawStart, -2), end: addDays(rawEnd, 2) };
   }, [milestones, tasks]);
 
   const fallbackScale = getRangeScale(start, end);

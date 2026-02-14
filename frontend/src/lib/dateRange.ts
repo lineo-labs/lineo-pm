@@ -58,7 +58,8 @@ export const getTaskRange = (tasks: Task[]) => {
   const dates = tasks.flatMap((task) => [parseISODate(task.startDate), parseISODate(task.endDate)]);
   const start = new Date(Math.min(...dates.map((date) => date.getTime())));
   const end = new Date(Math.max(...dates.map((date) => date.getTime())));
-  return { start, end };
+  // expand range: start two days before first task, end two days after last task
+  return { start: addDays(start, -2), end: addDays(end, 2) };
 };
 
 export const getDateColumns = (start: Date, end: Date) => {
