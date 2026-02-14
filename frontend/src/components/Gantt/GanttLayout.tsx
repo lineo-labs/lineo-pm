@@ -22,6 +22,7 @@ import { GanttHeader } from "./GanttHeader";
 import { GanttMilestones } from "./GanttMilestones";
 import { GanttRow } from "./GanttRow";
 import { GanttTaskList } from "./GanttTaskList";
+import { GanttRelations } from "./GanttRelations";
 
 interface GanttLayoutProps {
   tasks: Task[];
@@ -48,6 +49,7 @@ export const GanttLayout = ({
   onReorderTasks,
   onMoveMilestone,
 }: GanttLayoutProps) => {
+  const [showRelations, setShowRelations] = useState(false);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const [timelineWidth, setTimelineWidth] = useState(0);
@@ -192,6 +194,10 @@ export const GanttLayout = ({
 
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
 
+  // Relations are always visible now; removed toggle state
+
+  const positions = useMemo(() => tasks.map((t) => ({ id: t.id, ...getTaskPosition(t) })), [tasks, columnWidth, scale, rangeStart]);
+
   const handleRowDragStart = (taskId: number, event: PointerEvent<Element>) => {
     const index = tasks.findIndex((task) => task.id === taskId);
     if (index < 0) {
@@ -284,7 +290,17 @@ export const GanttLayout = ({
             Scale: {scale === "month" ? "Months" : scale === "week" ? "Weeks" : "Days"}
           </p>
         </div>
-        <div className="text-xs text-slate-500">{tasks.length} tasks</div>
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-slate-500">{tasks.length} tasks</div>
+          <button
+            type="button"
+            aria-pressed={!showRelations}
+            onClick={() => setShowRelations((s) => !s)}
+            className={`text-xs px-2 py-1 rounded-md border ${showRelations ? 'bg-sky-500 text-white border-sky-600' : 'bg-transparent text-slate-200 border-slate-700'}`}
+          >
+            {showRelations ? 'Hide relations' : 'Show relations'}
+          </button>
+        </div>
       </div>
 
       <div ref={layoutRef} className="relative grid grid-cols-[260px_1fr] gap-0">
@@ -336,6 +352,13 @@ export const GanttLayout = ({
               columnDates={scale === "day" ? columns : []}
             />
             <div className="relative">
+              <GanttRelations
+                tasks={tasks}
+                positions={positions}
+                  rowHeight={ROW_HEIGHT}
+                  headerHeight={HEADER_HEIGHT}
+                  visible={showRelations}
+              />
               {draggingTaskId !== null && dropIndex !== null && (
                 <div
                   className="absolute left-0 right-0 h-0.5 bg-sky-400/80"
