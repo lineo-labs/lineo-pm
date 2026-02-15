@@ -183,6 +183,11 @@ def possible_dependencies(
         .all()
     )
 
+    """API routes for managing relations between tasks.
+
+    Provides endpoints to list, create, update and delete task relations and
+    to compute possible dependency candidates.
+    """
     adj = _build_adjacency(task_ids, rels)
     # reverse adjacency for computing nodes that can reach a node
     rev_adj: dict[int, list[int]] = {tid: [] for tid in task_ids}

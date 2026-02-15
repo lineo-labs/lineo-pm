@@ -1,3 +1,5 @@
+"""Public schema exports for API request/response models."""
+
 from backend.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate
 from backend.schemas.task import TaskCreate, TaskOut, TaskReorder, TaskUpdate
 from backend.schemas.relation import RelationOut, RelationCreate, RelationUpdate

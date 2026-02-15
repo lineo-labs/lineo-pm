@@ -1,3 +1,5 @@
+"""Endpoints for project milestones (list, create, update, delete)."""
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -14,6 +16,15 @@ def list_milestones(
     project_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
+    """List milestones for a project ordered by target date.
+
+    Args:
+        project_id (int | None): Optional project id to filter milestones.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        list[Milestone]: Ordered list of milestones.
+    """
     query = db.query(Milestone)
     if project_id is not None:
         query = query.filter(Milestone.project_id == project_id)
@@ -22,6 +33,15 @@ def list_milestones(
 
 @router.post("", response_model=MilestoneOut, status_code=201)
 def create_milestone(payload: MilestoneCreate, db: Session = Depends(get_db)):
+    """Create a milestone attached to a project.
+
+    Args:
+        payload (MilestoneCreate): Pydantic payload with milestone fields.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        Milestone: The created milestone.
+    """
     project = db.query(Project).filter(Project.id == payload.project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -40,6 +60,16 @@ def create_milestone(payload: MilestoneCreate, db: Session = Depends(get_db)):
 
 @router.put("/{milestone_id}", response_model=MilestoneOut)
 def update_milestone(milestone_id: int, payload: MilestoneUpdate, db: Session = Depends(get_db)):
+    """Update fields of an existing milestone.
+
+    Args:
+        milestone_id (int): ID of the milestone to update.
+        payload (MilestoneUpdate): Pydantic payload with updated fields.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        Milestone: The updated milestone.
+    """
     milestone = db.query(Milestone).filter(Milestone.id == milestone_id).first()
     if not milestone:
         raise HTTPException(status_code=404, detail="Milestone not found")
@@ -61,6 +91,12 @@ def update_milestone(milestone_id: int, payload: MilestoneUpdate, db: Session = 
 
 @router.delete("/{milestone_id}", status_code=204)
 def delete_milestone(milestone_id: int, db: Session = Depends(get_db)):
+    """Delete a milestone by ID.
+
+    Args:
+        milestone_id (int): ID of the milestone to delete.
+        db (Session): Database session provided by dependency.
+    """
     milestone = db.query(Milestone).filter(Milestone.id == milestone_id).first()
     if not milestone:
         raise HTTPException(status_code=404, detail="Milestone not found")

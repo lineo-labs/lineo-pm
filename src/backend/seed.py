@@ -1,3 +1,9 @@
+"""Helpers to create default/sample data for development.
+
+These functions are used on startup to ensure a default project and a set
+of sample tasks, updates and milestones exist in development environments.
+"""
+
 from datetime import date, datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -9,6 +15,14 @@ from backend.db.models.milestone import Milestone
 
 
 def ensure_default_project(db: Session) -> Project:
+    """Ensure a default project exists, creating one if necessary.
+
+    Args:
+        db (Session): Database session used to query/create the project.
+
+    Returns:
+        Project: The existing or newly created default project.
+    """
     project = db.query(Project).first()
     if project:
         return project
@@ -27,6 +41,15 @@ def ensure_default_project(db: Session) -> Project:
 
 
 def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
+    """Create a set of sample tasks for a project when none exist.
+
+    Args:
+        db (Session): Database session used to query/create tasks.
+        project_id (int): The project id to attach the sample tasks to.
+
+    Returns:
+        list[Task]: Ordered list of tasks for the project.
+    """
     existing = db.query(Task).count()
     if existing:
         return db.query(Task).order_by(Task.order_index.asc()).all()
@@ -90,6 +113,16 @@ def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
 
 
 def ensure_sample_updates(db: Session, project_id: int, tasks: list[Task]) -> list[Update]:
+    """Create sample update records for a project if none exist.
+
+    Args:
+        db (Session): Database session used to query/create updates.
+        project_id (int): Project id to attach updates to.
+        tasks (list[Task]): Existing tasks to reference in some updates.
+
+    Returns:
+        list[Update]: List of updates ordered by creation time (desc).
+    """
     existing = db.query(Update).count()
     if existing:
         return db.query(Update).order_by(Update.created_at.desc()).all()
@@ -126,6 +159,15 @@ def ensure_sample_updates(db: Session, project_id: int, tasks: list[Task]) -> li
 
 
 def ensure_sample_milestones(db: Session, project_id: int) -> list[Milestone]:
+    """Create sample milestones for a project if none exist.
+
+    Args:
+        db (Session): Database session used to query/create milestones.
+        project_id (int): Project id to attach milestones to.
+
+    Returns:
+        list[Milestone]: Ordered list of milestones.
+    """
     existing = db.query(Milestone).count()
     if existing:
         return db.query(Milestone).order_by(Milestone.target_date.asc()).all()

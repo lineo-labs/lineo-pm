@@ -1,3 +1,9 @@
+"""Generate simple CRUD API routes dynamically for all registered models.
+
+This module inspects SQLAlchemy model mappers and exposes a set of generic
+CRUD endpoints for each model. It is intended for development/testing use.
+"""
+
 from fastapi import APIRouter
 from backend.db.database import SessionLocal
 from pydantic import BaseModel
@@ -5,12 +11,19 @@ from sqlalchemy.orm import Session
 from backend.db.models.base import Base
 
 
-
 def get_all_models():
+    """Yield all SQLAlchemy model classes registered on the declarative base."""
     for mapper in Base.registry.mappers:
         yield mapper.class_
 
+
 def generate_crud_routes():
+    """Create and return an `APIRouter` with generic CRUD endpoints.
+
+    Returns:
+        APIRouter: Router containing create/read/update/delete endpoints for
+            each discovered model.
+    """
     router = APIRouter()
 
     def get_db():

@@ -1,3 +1,5 @@
+"""Pydantic schemas for tasks and task-related API payloads."""
+
 from datetime import date
 from typing import List, Optional
 
@@ -5,6 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class TaskBase(BaseModel):
+    """Base fields shared by task create/update schemas."""
     project_id: int
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
@@ -15,10 +18,12 @@ class TaskBase(BaseModel):
 
 
 class TaskCreate(TaskBase):
+    """Schema for creating a task."""
     pass
 
 
 class TaskUpdate(BaseModel):
+    """Schema for updating task fields (partial update support)."""
     project_id: Optional[int] = None
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
@@ -29,6 +34,7 @@ class TaskUpdate(BaseModel):
 
 
 class TaskOut(TaskBase):
+    """Schema returned by the API representing a task."""
     id: int
     order_index: int
 
@@ -37,4 +43,5 @@ class TaskOut(TaskBase):
 
 
 class TaskReorder(BaseModel):
+    """Payload for reordering tasks by explicit ID list."""
     ordered_ids: List[int] = Field(..., min_items=1)

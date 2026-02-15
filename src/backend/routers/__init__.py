@@ -1,3 +1,5 @@
+"""API router package that aggregates individual endpoint routers."""
+
 from fastapi import APIRouter
 
 from backend.routers.milestones import router as milestones_router

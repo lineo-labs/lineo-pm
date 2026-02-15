@@ -1,3 +1,8 @@
+"""API routes for project CRUD operations.
+
+Provides endpoints to list, create, retrieve, update and delete projects.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -10,6 +15,14 @@ router = APIRouter(tags=["project"])
 
 @router.get("/projects", response_model=list[ProjectOut])
 def list_projects(db: Session = Depends(get_db)):
+    """List all projects ordered by ID.
+
+    Args:
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        list[Project]: List of project instances.
+    """
     return db.query(Project).order_by(Project.id.asc()).all()
 
 
@@ -25,6 +38,15 @@ def create_project(payload: ProjectCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(project)
     return project
+    """Create a new project from the provided payload.
+
+    Args:
+        payload (ProjectCreate): Pydantic payload with project fields.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        Project: The created project instance.
+    """
 
 
 @router.get("/projects/{project_id}", response_model=ProjectOut)
@@ -33,6 +55,15 @@ def get_project(project_id: int, db: Session = Depends(get_db)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
+    """Retrieve a project by ID.
+
+    Args:
+        project_id (int): ID of the project to retrieve.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        Project: The requested project.
+    """
 
 
 @router.put("/projects/{project_id}", response_model=ProjectOut)
@@ -47,6 +78,16 @@ def update_project(project_id: int, payload: ProjectUpdate, db: Session = Depend
     db.commit()
     db.refresh(project)
     return project
+    """Update an existing project with new values.
+
+    Args:
+        project_id (int): ID of the project to update.
+        payload (ProjectUpdate): Pydantic payload with updated fields.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        Project: The updated project instance.
+    """
 
 
 @router.delete("/projects/{project_id}", status_code=204)
@@ -57,6 +98,12 @@ def delete_project(project_id: int, db: Session = Depends(get_db)):
     db.delete(project)
     db.commit()
     return None
+    """Delete a project by ID.
+
+    Args:
+        project_id (int): ID of the project to delete.
+        db (Session): Database session provided by dependency.
+    """
 
 
 @router.get("/project", response_model=ProjectOut)
@@ -65,6 +112,14 @@ def get_default_project(db: Session = Depends(get_db)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
+    """Return the first (default) project.
+
+    Args:
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        Project: The default project.
+    """
 
 
 @router.put("/project", response_model=ProjectOut)
@@ -86,3 +141,14 @@ def upsert_default_project(payload: ProjectUpdate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(project)
     return project
+    """Create or update the default project.
+
+    If a project exists, update its fields; otherwise create a new one.
+
+    Args:
+        payload (ProjectUpdate): Pydantic payload with project fields.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        Project: The created or updated project.
+    """

@@ -1,3 +1,9 @@
+"""Task-related API routes and date propagation helpers.
+
+Includes endpoints to list, create, update, delete and reorder tasks. Date
+propagation logic ensures successor tasks respect finish-to-start relations.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -16,6 +22,15 @@ def list_tasks(
     project_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
+    """List tasks, optionally filtered by project.
+
+    Args:
+        project_id (int | None): Optional project id to filter tasks.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        list[Task]: Ordered list of tasks for the (optional) project.
+    """
     query = db.query(Task)
     if project_id is not None:
         query = query.filter(Task.project_id == project_id)
@@ -43,8 +58,20 @@ def list_tasks(
     return tasks
 
 
+
+
 @router.post("", response_model=TaskOut, status_code=201)
 def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
+    """Create a new task within a project.
+
+    Args:
+        payload (TaskCreate): Pydantic payload with task data.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        Task: The created task.
+    """
+
     max_order = (
         db.query(func.max(Task.order_index))
         .filter(Task.project_id == payload.project_id)
@@ -65,10 +92,29 @@ def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(task)
     return task
+    """Create a new task within a project.
+
+    Args:
+        payload (TaskCreate): Pydantic payload with task data.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        Task: The created task.
+    """
 
 
 @router.put("/{task_id}", response_model=list[TaskOut])
 def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)):
+    """Update a task and propagate date changes to successors if needed.
+
+    Args:
+        task_id (int): ID of the task to update.
+        payload (TaskUpdate): Pydantic payload with updated fields.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        list[Task]: List of updated tasks after propagation.
+    """
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -140,6 +186,8 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
         .all()
     )
     return updated_tasks
+
+
 
 
 def _propagate_date_changes(changed_task_ids: list[int], db: Session):
@@ -232,8 +280,16 @@ def _propagate_date_changes(changed_task_ids: list[int], db: Session):
     return list(updated_set)
 
 
+
+
 @router.delete("/{task_id}", status_code=204)
 def delete_task(task_id: int, db: Session = Depends(get_db)):
+    """Delete a task by ID.
+
+    Args:
+        task_id (int): ID of the task to delete.
+        db (Session): Database session provided by dependency.
+    """
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -242,8 +298,19 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     return None
 
 
+
+
 @router.post("/reorder", response_model=list[TaskOut])
 def reorder_tasks(payload: TaskReorder, db: Session = Depends(get_db)):
+    """Reorder tasks according to `payload.ordered_ids`.
+
+    Args:
+        payload (TaskReorder): Payload containing the new order of task IDs.
+        db (Session): Database session provided by dependency.
+
+    Returns:
+        list[Task]: Tasks in their new order.
+    """
     tasks = db.query(Task).filter(Task.id.in_(payload.ordered_ids)).all()
     if len(tasks) != len(payload.ordered_ids):
         raise HTTPException(status_code=400, detail="One or more task IDs are invalid")
@@ -260,3 +327,4 @@ def reorder_tasks(payload: TaskReorder, db: Session = Depends(get_db)):
         .all()
     )
     return ordered_tasks
+
