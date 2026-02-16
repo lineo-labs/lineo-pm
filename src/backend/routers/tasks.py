@@ -5,6 +5,9 @@ propagation logic ensures successor tasks respect finish-to-start relations.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+import io
+import csv
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -327,4 +330,61 @@ def reorder_tasks(payload: TaskReorder, db: Session = Depends(get_db)):
         .all()
     )
     return ordered_tasks
+
+
+@router.get("/export")
+def export_tasks_csv(project_id: int = Query(...), db: Session = Depends(get_db)):
+    """Export tasks for a project as CSV.
+
+    Args:
+        project_id (int): Project ID to export tasks for.
+        db (Session): Database session.
+
+    Returns:
+        StreamingResponse: CSV file download response.
+    """
+    tasks = (
+        db.query(Task)
+        .filter(Task.project_id == project_id)
+        .order_by(Task.order_index.asc())
+        .all()
+    )
+
+    # include relations as dependencies (same logic as list_tasks)
+    if tasks:
+        task_ids = [t.id for t in tasks]
+        rels = (
+            db.query(Relation)
+            .filter(Relation.destination_task_id.in_(task_ids))
+            .all()
+        )
+        rel_map: dict[int, list[int]] = {}
+        for r in rels:
+            rel_map.setdefault(r.destination_task_id, []).append(r.source_task_id)
+
+        for t in tasks:
+            existing = set(t.dependencies or [])
+            from_rels = set(rel_map.get(t.id, []))
+            merged = sorted(existing.union(from_rels))
+            t.dependencies = merged
+
+    si = io.StringIO()
+    writer = csv.writer(si, delimiter=';')
+    writer.writerow(["id", "title", "description", "status", "start_date", "end_date", "order_index", "dependencies"])
+    for t in tasks:
+        deps = "|".join(map(str, t.dependencies or []))
+        writer.writerow([
+            t.id,
+            t.title or "",
+            t.description or "",
+            t.status or "",
+            t.start_date.isoformat() if t.start_date else "",
+            t.end_date.isoformat() if t.end_date else "",
+            t.order_index or "",
+            deps,
+        ])
+
+    si.seek(0)
+    headers = {"Content-Disposition": f'attachment; filename="project_{project_id}_tasks.csv"'}
+    return StreamingResponse(iter([si.getvalue()]), media_type="text/csv", headers=headers)
 

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { exportTasksCsv } from "../lib/api";
 
 import type { Milestone, Project, ProjectUpdate, Task } from "../lib/types";
 
@@ -53,6 +54,31 @@ export const ProjectCard = ({
             className="rounded-md border border-slate-800 px-3 py-2 text-xs font-semibold text-slate-200"
           >
             Edit
+          </button>
+        )}
+        {project && (
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const { blob, filename } = await exportTasksCsv(project.id);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+              } catch (err) {
+                // eslint-disable-next-line no-console
+                console.error("Export failed", err);
+                alert("Export failed");
+              }
+            }}
+            className="ml-2 rounded-md border border-slate-800 px-3 py-2 text-xs font-semibold text-slate-200"
+          >
+            Export CSV
           </button>
         )}
       </div>

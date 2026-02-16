@@ -22,6 +22,22 @@ interface TaskEditDialogProps {
   onDependencyChange?: (taskId: number, dependencies: number[]) => Promise<void> | void;
 }
 
+/**
+ * Dialog for editing an existing task, dependencies and adding updates.
+ *
+ * Provides ability to save, delete or add a textual update for the task.
+ * Supports changing dependencies via `onDependencyChange` when supplied.
+ *
+ * @param {object} props - Component props
+ * @param {import("../lib/types").Task | null} props.task - Task to edit or null
+ * @param {boolean} props.open - Whether the dialog is visible
+ * @param {() => void} props.onClose - Close handler
+ * @param {(payload: {text: string, taskId: number}) => Promise<void> | void} props.onCreateUpdate - Handler to add a task update
+ * @param {(taskId: number, payload: {title: string, description?: string, status: import("../lib/types").TaskStatus, startDate: string, endDate: string, dependencies?: number[]}) => void} props.onSave - Save handler
+ * @param {(taskId: number) => Promise<void> | void} props.onDelete - Delete handler
+ * @param {(taskId: number, dependencies: number[]) => Promise<void> | void} [props.onDependencyChange] - Optional dependency change handler
+ * @returns {JSX.Element | null} The task edit dialog element or null when closed
+ */
 export const TaskEditDialog = ({
   task,
   open,
@@ -37,6 +53,7 @@ export const TaskEditDialog = ({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [updateText, setUpdateText] = useState("");
+  
   const [possibleTasks, setPossibleTasks] = useState<Task[]>([]);
   const [selectedDependencies, setSelectedDependencies] = useState<number[]>([]);
   const [depsOpen, setDepsOpen] = useState(false);
@@ -248,45 +265,76 @@ export const TaskEditDialog = ({
           </div>
           <div>
             <label className="text-xs text-slate-400">Status</label>
-            <select
-              className="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-              value={status}
-              onChange={(event) => setStatus(event.target.value as TaskStatus)}
-            >
-              <option value="todo">Todo</option>
-              <option value="in_progress">In progress</option>
-              <option value="done">Done</option>
-            </select>
+            <div className="mt-2 flex gap-3">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-200">
+                <input
+                  type="radio"
+                  name="task-status"
+                  value="todo"
+                  checked={status === "todo"}
+                  onChange={() => setStatus("todo")}
+                  className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-indigo-500"
+                />
+                <span className="text-xs text-slate-100">Todo</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm text-slate-200">
+                <input
+                  type="radio"
+                  name="task-status"
+                  value="in_progress"
+                  checked={status === "in_progress"}
+                  onChange={() => setStatus("in_progress")}
+                  className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-indigo-500"
+                />
+                <span className="text-xs text-slate-100">In progress</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm text-slate-200">
+                <input
+                  type="radio"
+                  name="task-status"
+                  value="done"
+                  checked={status === "done"}
+                  onChange={() => setStatus("done")}
+                  className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-indigo-500"
+                />
+                <span className="text-xs text-slate-100">Done</span>
+              </label>
+            </div>
           </div>
         </div>
 
         <div className="mt-6 flex flex-col gap-4">
-          <div className="rounded-xl border border-slate-900 bg-slate-950/60 p-4">
-            <div className="text-sm font-semibold text-slate-200">Add update</div>
-            <textarea
-              className="mt-3 w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-              value={updateText}
-              onChange={(event) => setUpdateText(event.target.value)}
-              rows={3}
-              placeholder="Write an update for this task..."
-            />
-            <div className="mt-3 flex justify-end">
-              <button
-                type="button"
-                disabled={updateDisabled}
-                onClick={() => {
-                  if (!task) {
-                    return;
-                  }
-                  onCreateUpdate({ text: updateText.trim(), taskId: task.id });
-                  setUpdateText("");
-                }}
-                className="rounded-md bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-100 transition enabled:hover:bg-indigo-500 disabled:opacity-60"
-              >
-                Add update
-              </button>
+          <details className="mt-6">
+            <summary className="flex cursor-pointer items-center justify-between text-lg font-semibold text-slate-100">
+              <span>New update</span>
+              <span />
+            </summary>
+            <div className="mt-3 flex flex-col gap-2">
+              <textarea
+                className="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                value={updateText}
+                onChange={(event) => setUpdateText(event.target.value)}
+                rows={3}
+                placeholder="Write the latest update..." // using same placeholder as TasksCard.tsx
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  disabled={updateDisabled}
+                  onClick={() => {
+                    if (!task) {
+                      return;
+                    }
+                    onCreateUpdate({ text: updateText.trim(), taskId: task.id });
+                    setUpdateText("");
+                  }}
+                  className="rounded-md bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-100 transition enabled:hover:bg-indigo-500 disabled:opacity-60"
+                >
+                  Add update
+                </button>
+              </div>
             </div>
-          </div>
+          </details>
           <div className="flex items-center justify-between gap-2">
           <button
             type="button"

@@ -123,6 +123,20 @@ export const fetchTasks = async (projectId: number) => {
   return data.map(toTask);
 };
 
+export const exportTasksCsv = async (projectId: number) => {
+  const response = await fetch(`${API_BASE}/tasks/export?project_id=${projectId}`);
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `HTTP ${response.status}`);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("content-disposition") || "";
+  let filename = `project_${projectId}_tasks.csv`;
+  const match = /filename\s*=\s*"?([^";]+)"?/.exec(disposition);
+  if (match) filename = match[1];
+  return { blob, filename };
+};
+
 export const getAllTasks = async (projectId?: number) => {
   const url = projectId ? `${API_BASE}/tasks?project_id=${projectId}` : `${API_BASE}/tasks`;
   const response = await fetch(url);
