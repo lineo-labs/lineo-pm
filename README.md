@@ -1,136 +1,172 @@
+<div align="center">
 
-Lines-PM
+<p align="center">
+    <img src="frontend/src/assets/logo.png"/>
+<p>
 
-Lines-PM — Visual, time-native planning for those responsible for the plan, not the tickets.
-A modern, self-hosted open-source project management tool built around an interactive Gantt/timeline view, focused on planning and storytelling, not just executing tasks.
+<h1 align="center">Open Source Decision-Driven Project Management</h1>
 
-
----
-
-Why Lines?
-
-Unlike traditional Kanban tools, Lines is time-first:
-
-Visualize your project at a glance with an interactive timeline
-
-Plan and adjust tasks with drag & drop
-
-Track milestones and project progress as a story
-
-Keep an immutable log of updates for audit and storytelling
-
-
-Lines is designed for planners, not ticket-doers.
-
+![Demo](docs/demo-preview.gif)
 
 ---
 
-Key Features (current)
+## What is Lines?
 
-Projects: create, edit, select
+**Lines-PM** is a modern open-source project management tool built around **interactive Gantt charts** and **decision-driven planning**.
 
-Tasks: create, reorder, edit statuses (todo | in_progress | done)
+It is designed for **Project Managers, founders, and executives** who need to **understand and manipulate project timelines visually**, without getting lost in task micro-management.
 
-Milestones: create, edit, drag along the timeline
+The core idea is simple:
 
-Interactive Gantt:
+> Move activities. Change dependencies. Instantly see the impact.
 
-Drag & drop scheduling
+Lines helps you understand **how decisions affect time**.
 
-Auto-zoom based on date range
-
-Inline task editing
-
-
-Synchronized task list: aligned with Gantt rows
-
-Optimistic UI: instant client-side updates with backend confirmation
-
-Updates: append-only notes attached to the project timeline (immutable)
-
-Seed data: try the app immediately
-
-
-> ⚠️ Current limitations: Tasks are currently free-moving; automatic dependency propagation is planned for future releases.
-
-
-
+Hover over a task to highlight its dependency chain and immediately visualize project dynamics.
 
 ---
 
-Screenshots / Demo
+## Why Lines?
 
-(Add at least 1 GIF or screenshot here showing: Gantt + drag, milestones, side panel, updates)
+Most project tools focus on task tracking, gamification, or Kanban workflows.
 
+Lines focuses on **decision support**.
+
+It is **time-first**, not board-first.
+
+With Lines you can:
+
+* Visualize the entire project timeline at a glance
+* Adjust schedules using intuitive drag & drop
+* Understand milestone impact instantly
+* Track progress as a coherent timeline story
+* Maintain update logs for audit and reporting
+
+Instead of managing tasks, you manage **project flow**.
 
 ---
 
-Quick Start
+## Key Features (Current)
 
-1. Clone the repo:
+### Projects
 
+* Create, edit, and switch between projects
 
+### Tasks
 
+* Create and reorder tasks
+* Edit status (`todo | in_progress | done`)
+* Inline editing inside the Gantt
+
+### Milestones
+
+* Create, edit, and drag directly on the timeline
+
+### Interactive Gantt Chart
+
+* Drag & drop scheduling
+* Automatic dependency propagation
+* Auto-zoom based on date range
+* Inline editing
+* Dependency chain highlighting on hover
+
+### Synchronized Task List
+
+* Task list always aligned with Gantt rows
+
+### Optimistic UI
+
+* Instant client-side updates with backend confirmation
+
+### Project Updates
+
+* Timeline-based notes attached to projects
+
+---
+
+## Quick Start
+
+### 1. Clone the repository
+
+```bash
 git clone https://github.com/your-org/lines-pm.git
 cd lines-pm
+```
 
-2. Start development containers:
+### 2. Start development containers
 
-
-
+```bash
 docker compose -f docker-compose.dev.yml up -d --build
+```
 
-3. Access the frontend: http://localhost:5173
-Backend OpenAPI docs: /docs on the API URL
+### 3. Access the application
 
+Frontend:
+[http://localhost:5173](http://localhost:5173)
 
+Backend OpenAPI docs:
+`/docs` on the API URL
 
-> Note: Celery is configured for background jobs; the app works without workers running.
-
-
-
-
----
-
-Technology Stack
-
-Backend: FastAPI, PostgreSQL (async SQLAlchemy), Celery ready
-
-Frontend: React, TypeScript, Tailwind CSS, Vite
-
-Dev / Infra: Docker, docker-compose
-
-
+> Note: Celery is configured for background jobs. The application works even if workers are not running.
 
 ---
 
-Roadmap / Upcoming
+## Technology Stack
 
-CSV import/export
+**Backend**
 
-Task hierarchies
+* FastAPI
+* PostgreSQL (async SQLAlchemy)
+* Celery (background jobs ready)
 
-Gantt UX improvements
+**Frontend**
 
-Optional AI integrations (plugin-based)
+* React
+* TypeScript
+* Tailwind CSS
+* Vite
 
-Automatic dependency propagation
+**Infrastructure**
 
-
-
----
-
-Contributing
-
-Forks & PRs welcome — prefer small, focused changes.
-Follow existing architecture and style (FastAPI backend, React frontend).
-
+* Docker
+* Docker Compose
 
 ---
 
-License
+## Roadmap
 
-Apache License 3.0
+* [ ] CSV import
+* [ ] PDF export
+* [ ] Baseline drafting and comparison
+* [ ] Cross-project Gantt view
+* [ ] User authentication & permissions
+* [ ] Shared project views (collaboration / view-only mode)
+* [ ] Optional AI Assistant (Jarvis-style) for:
 
+  * Auto-suggest task durations
+  * Generate project summaries
+  * Intelligent CSV/Excel import
+  * Natural language queries (e.g. "Show me all tasks delayed by more than 2 days")
+  * Predictive analytics (e.g. "What happens if we delay Task X by 3 days?")
+  * Bottleneck identification (e.g. "Which tasks are most likely to cause delays?")
+
+> Other features and improvements will be added based on user feedback and contributions.
 
 ---
+
+## Contributing
+
+Contributions are welcome.
+
+* Prefer small, focused pull requests
+* Follow the existing architecture:
+
+  * FastAPI backend
+  * React frontend
+* Keep changes consistent with the project style
+
+---
+
+## License
+
+Apache License 2.0
