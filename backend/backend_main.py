@@ -7,9 +7,9 @@ startup actions used to initialise the database and seed sample data.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.db.database import SessionLocal, init_db
-from backend.routers import api_router
-from backend.seed import (
+from src.db.database import SessionLocal, init_db
+from src.routers import api_router
+from src.seed import (
 	ensure_default_project,
 	ensure_sample_milestones,
 	ensure_sample_tasks,

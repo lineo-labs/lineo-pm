@@ -1,8 +1,8 @@
 """Public schema exports for API request/response models."""
 
-from backend.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate
-from backend.schemas.task import TaskCreate, TaskOut, TaskReorder, TaskUpdate
-from backend.schemas.relation import RelationOut, RelationCreate, RelationUpdate
+from src.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate
+from src.schemas.task import TaskCreate, TaskOut, TaskReorder, TaskUpdate
+from src.schemas.relation import RelationOut, RelationCreate, RelationUpdate
 
 __all__ = [
     "ProjectCreate",

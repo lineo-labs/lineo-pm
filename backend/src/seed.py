@@ -8,10 +8,10 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
-from backend.db.models.project import Project
-from backend.db.models.task import Task
-from backend.db.models.update import Update
-from backend.db.models.milestone import Milestone
+from src.db.models.project import Project
+from src.db.models.task import Task
+from src.db.models.update import Update
+from src.db.models.milestone import Milestone
 
 
 def ensure_default_project(db: Session) -> Project:

@@ -2,9 +2,11 @@ interface GanttHeaderProps {
   labels: string[];
   columnWidth: number;
   height: number;
+  hideDone?: boolean;
+  onToggleHideDone?: () => void;
 }
 
-export const GanttHeader = ({ labels, columnWidth, height }: GanttHeaderProps) => {
+export const GanttHeader = ({ labels, columnWidth, height, hideDone = false, onToggleHideDone }: GanttHeaderProps) => {
   return (
     <div
       className="sticky top-0 z-10 grid box-border border-b border-slate-900 bg-slate-950"
@@ -21,6 +23,7 @@ export const GanttHeader = ({ labels, columnWidth, height }: GanttHeaderProps) =
           {label}
         </div>
       ))}
+          {/* Toggle moved to layout controls (left of Show relations) */}
     </div>
   );
 };

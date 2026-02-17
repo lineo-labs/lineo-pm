@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from backend.db.database import get_db
-from backend.db.models.relation import Relation
-from backend.db.models.task import Task
-from backend.schemas.relation import RelationOut, RelationCreate, RelationUpdate, PossibleRelationsOut
-from backend.schemas.task import TaskOut
+from src.db.database import get_db
+from src.db.models.relation import Relation
+from src.db.models.task import Task
+from src.schemas.relation import RelationOut, RelationCreate, RelationUpdate, PossibleRelationsOut
+from src.schemas.task import TaskOut
 
 router = APIRouter(prefix="/relations", tags=["relations"])
 

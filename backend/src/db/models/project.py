@@ -6,7 +6,7 @@ project metadata such as name, description and start/end dates.
 
 from sqlalchemy import Column, Date, Integer, String, Text
 
-from backend.db.models.base import Base
+from src.db.models.base import Base
 
 
 class Project(Base):

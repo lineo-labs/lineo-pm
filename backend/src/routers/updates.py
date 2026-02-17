@@ -3,11 +3,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from backend.db.database import get_db
-from backend.db.models.project import Project
-from backend.db.models.task import Task
-from backend.db.models.update import Update
-from backend.schemas.update import UpdateCreate, UpdateOut
+from src.db.database import get_db
+from src.db.models.project import Project
+from src.db.models.task import Task
+from src.db.models.update import Update
+from src.schemas.update import UpdateCreate, UpdateOut
 
 router = APIRouter(prefix="/updates", tags=["updates"])
 

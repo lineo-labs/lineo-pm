@@ -6,9 +6,9 @@ Provides endpoints to list, create, retrieve, update and delete projects.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.db.database import get_db
-from backend.db.models.project import Project
-from backend.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate
+from src.db.database import get_db
+from src.db.models.project import Project
+from src.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate
 
 router = APIRouter(tags=["project"])
 

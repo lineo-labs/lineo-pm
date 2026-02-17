@@ -1,5 +1,5 @@
 """Database package exposing models for the backend application."""
 
-from backend.db import models
+from src.db import models
 
 __all__ = ["models"]

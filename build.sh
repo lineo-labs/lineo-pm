@@ -14,7 +14,7 @@ if [ "$1" == "shell" ]; then
     # Run the development container with volume mounting and open a shell
     docker run -it --rm \
         --name $CONTAINER_NAME \
-        -v $(pwd)/src:/app \
+        -v $(pwd)/backend:/app \
         --env-file .env-dev \
         -p 8000:8000 \
         $IMAGE_NAME \

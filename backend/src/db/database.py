@@ -7,8 +7,8 @@ provides helpers to initialise the database schema.
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from backend.setup import setup
-from backend.db.models.base import Base
+from src.setup import setup
+from src.db.models.base import Base
 
 
 def _build_engine():
@@ -38,7 +38,7 @@ def init_db():
     registered on the `Base` metadata and then create any missing tables.
     """
     print(f"Creating database tables in {setup.DATABASE_URL} ...")
-    from backend.db import models  # noqa: F401
+    from src.db import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
     print("Done.")
 

@@ -8,7 +8,7 @@ from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, Text
 
-from backend.db.models.base import Base
+from src.db.models.base import Base
 
 
 class Update(Base):

@@ -115,7 +115,7 @@ export const MultiSelectDropdown = ({
               <ul className="flex flex-col gap-2">
                 {filtered.map((o) => {
                   const active = selectedIds.includes(o.id);
-                  const baseCls = "rounded-lg border border-slate-900 bg-slate-900/40 p-3 cursor-pointer";
+                  const baseCls = "rounded-lg border border-slate-900 bg-slate-900/40 p-3 cursor-pointer hover:bg-slate-800/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500";
                   const activeCls = "bg-indigo-600 text-white ring-2 ring-indigo-500 border-indigo-600";
                   return (
                     <li key={o.id}>

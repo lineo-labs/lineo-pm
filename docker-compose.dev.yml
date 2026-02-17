@@ -25,14 +25,14 @@ services:
       PYTHONPATH: /app/src
     working_dir: /app/src
     volumes:
-      - .:/app
+      - ./backend:/app/src
     depends_on:
       - postgres
       - redis
     ports:
       - "8000:8000"
     command: >
-      bash -c "pip install -e /app/src && uvicorn backend_main:app --host 0.0.0.0 --port 8000 --reload"
+      bash -c "pip install -e /app/src  && uvicorn backend_main:app --host 0.0.0.0 --port 8000 --reload"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
       interval: 5s
@@ -50,18 +50,18 @@ services:
       PYTHONPATH: /app/src
     working_dir: /app/src
     volumes:
-      - .:/app
+      - ./backend:/app/src  
     depends_on:
       - postgres
       - redis
     command: >
-      bash -c "pip install -e /app/src && celery -A backend.celery_app worker --loglevel=info"
+      bash -c "pip install -e /app/src && celery -A src.celery_app worker --loglevel=info"
 
   ui:
     image: node:20-alpine
     working_dir: /app/frontend
     volumes:
-      - .:/app
+      - ./frontend:/app
     ports:
       - "5173:5173"
     depends_on:

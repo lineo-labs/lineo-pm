@@ -6,7 +6,7 @@ milestones with target dates and descriptions.
 
 from sqlalchemy import Column, Date, ForeignKey, Integer, String, Text
 
-from backend.db.models.base import Base
+from src.db.models.base import Base
 
 
 class Milestone(Base):

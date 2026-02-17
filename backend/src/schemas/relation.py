@@ -38,7 +38,7 @@ class RelationOut(RelationBase):
 
 
 # Response model for /relations/possible endpoint
-from backend.schemas.task import TaskOut
+from src.schemas.task import TaskOut
 
 
 class PossibleRelationsOut(BaseModel):

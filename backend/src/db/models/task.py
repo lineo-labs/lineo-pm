@@ -6,7 +6,7 @@ status, dates and dependencies.
 
 from sqlalchemy import JSON, Column, Date, ForeignKey, Integer, String, Text
 
-from backend.db.models.base import Base
+from src.db.models.base import Base
 
 
 class Task(Base):

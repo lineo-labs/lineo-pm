@@ -2,6 +2,7 @@ import type { Task } from "../../lib/types";
 
 interface GanttTaskListProps {
   tasks: Task[];
+  hideDone?: boolean;
   rowHeight: number;
   onEditTask: (task: Task) => void;
   headerHeight: number;
@@ -9,10 +10,12 @@ interface GanttTaskListProps {
 
 export const GanttTaskList = ({
   tasks,
+  hideDone = false,
   rowHeight,
   onEditTask,
   headerHeight,
 }: GanttTaskListProps) => {
+  const visible = hideDone ? tasks.filter((t) => !(t.status && t.status.toLowerCase() === "done")) : tasks;
   return (
     <div className="rounded-l-xl border border-slate-900 bg-slate-950">
       <div
@@ -22,12 +25,12 @@ export const GanttTaskList = ({
         Task
       </div>
       <div>
-        {tasks.length === 0 && (
+        {visible.length === 0 && (
           <div className="flex items-center px-3 text-xs text-slate-500" style={{ height: rowHeight }}>
             No tasks
           </div>
         )}
-        {tasks.map((task) => (
+        {visible.map((task) => (
           <div
             key={task.id}
             className="flex items-center justify-between border-b border-slate-900/70 px-3 text-xs text-slate-200 box-border"

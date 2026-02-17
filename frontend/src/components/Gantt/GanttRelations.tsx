@@ -56,15 +56,16 @@ export const GanttRelations = ({ tasks, positions, rowHeight, visible = true }: 
           adj.get(d)!.add(t.id);
           preds.get(t.id)!.add(d);
           succs.get(d)!.add(t.id);
-          // lock at src end and tgt start
-          lockSet.add(`${d}:end`);
-          lockSet.add(`${t.id}:start`);
 
           const tgtPos = posMap.get(t.id);
           const srcPos = posMap.get(d);
           const tgtIndex = indexMap.get(t.id);
           const srcIndex = indexMap.get(d);
+          // only add locks/edges if both tasks are currently visible (have positions)
           if (tgtPos && srcPos && tgtIndex !== undefined && srcIndex !== undefined) {
+            // lock at src end and tgt start
+            lockSet.add(`${d}:end`);
+            lockSet.add(`${t.id}:start`);
             const tgtY = tgtIndex * rowHeight + rowHeight / 2;
             const srcY = srcIndex * rowHeight + rowHeight / 2;
             const tgtX = tgtPos.offset;

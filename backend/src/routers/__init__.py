@@ -2,11 +2,11 @@
 
 from fastapi import APIRouter
 
-from backend.routers.milestones import router as milestones_router
-from backend.routers.project import router as project_router
-from backend.routers.tasks import router as tasks_router
-from backend.routers.updates import router as updates_router
-from backend.routers.relations import router as relations_router
+from src.routers.milestones import router as milestones_router
+from src.routers.project import router as project_router
+from src.routers.tasks import router as tasks_router
+from src.routers.updates import router as updates_router
+from src.routers.relations import router as relations_router
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(milestones_router)

@@ -49,6 +49,7 @@ export const GanttLayout = ({
   onReorderTasks,
   onMoveMilestone,
 }: GanttLayoutProps) => {
+  const [hideDone, setHideDone] = useState(false);
   const [showRelations, setShowRelations] = useState(false);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
@@ -60,10 +61,10 @@ export const GanttLayout = ({
   const dropIndexRef = useRef<number | null>(null);
 
   const clampIndex = (value: number) => {
-    if (tasks.length === 0) {
+    if (visibleTasks.length === 0) {
       return 0;
     }
-    return Math.max(0, Math.min(tasks.length - 1, value));
+    return Math.max(0, Math.min(visibleTasks.length - 1, value));
   };
 
   useEffect(() => {
@@ -194,9 +195,14 @@ export const GanttLayout = ({
 
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
 
+  const visibleTasks = useMemo(() => {
+    if (!hideDone) return tasks;
+    return tasks.filter((t) => !(t.status && t.status.toLowerCase() === "done"));
+  }, [tasks, hideDone]);
+
   // Relations are always visible now; removed toggle state
 
-  const positions = useMemo(() => tasks.map((t) => ({ id: t.id, ...getTaskPosition(t) })), [tasks, columnWidth, scale, rangeStart]);
+  const positions = useMemo(() => visibleTasks.map((t) => ({ id: t.id, ...getTaskPosition(t) })), [visibleTasks, columnWidth, scale, rangeStart]);
 
   const handleRowDragStart = (taskId: number, event: PointerEvent<Element>) => {
     const index = tasks.findIndex((task) => task.id === taskId);
@@ -209,7 +215,9 @@ export const GanttLayout = ({
     dragStartIndexRef.current = index;
     setDraggingTaskId(taskId);
     setDropIndex(index);
-    dropIndexRef.current = index;
+    // store dropIndexRef as visible-row index when possible
+    const visIndex = visibleTasks.findIndex((t) => t.id === taskId);
+    dropIndexRef.current = visIndex >= 0 ? visIndex : index;
     if (event.currentTarget?.setPointerCapture) {
       event.currentTarget.setPointerCapture(event.pointerId);
     }
@@ -232,6 +240,7 @@ export const GanttLayout = ({
       const relativeY = event.clientY - rect.top - HEADER_HEIGHT;
       const nextIndex = clampIndex(Math.floor(relativeY / ROW_HEIGHT));
       setDropIndex(nextIndex);
+      // store visible-row index; will be converted to full-task index on drop
       dropIndexRef.current = nextIndex;
     };
 
@@ -240,7 +249,18 @@ export const GanttLayout = ({
         return;
       }
       const startIndex = dragStartIndexRef.current;
-      const nextIndex = dropIndexRef.current ?? startIndex;
+      // convert visible next index to full tasks index if necessary
+      let nextIndex = startIndex;
+      if (dropIndexRef.current !== null && dropIndexRef.current !== undefined) {
+        const vis = dropIndexRef.current;
+        const visTask = visibleTasks[vis];
+        if (visTask) {
+          const mapped = tasks.findIndex((t) => t.id === visTask.id);
+          nextIndex = mapped >= 0 ? mapped : startIndex;
+        } else {
+          nextIndex = startIndex;
+        }
+      }
       setDraggingTaskId(null);
       setDropIndex(null);
       dragPointerIdRef.current = null;
@@ -279,7 +299,7 @@ export const GanttLayout = ({
     };
   }, [draggingTaskId, onReorderTasks, tasks]);
 
-  const draggingIndex = draggingTaskId !== null ? tasks.findIndex((t) => t.id === draggingTaskId) : null;
+  const draggingIndex = draggingTaskId !== null ? visibleTasks.findIndex((t) => t.id === draggingTaskId) : null;
 
   return (
     <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
@@ -291,7 +311,15 @@ export const GanttLayout = ({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-xs text-slate-500">{tasks.length} tasks</div>
+          <div className="text-xs text-slate-500">{visibleTasks.length} tasks</div>
+          <button
+            type="button"
+            onClick={() => setHideDone((s) => !s)}
+            aria-pressed={hideDone}
+            className={`text-xs px-2 py-1 rounded-md border ${hideDone ? 'bg-sky-500 text-white border-sky-600' : 'bg-transparent text-slate-200 border-slate-700'}`}
+          >
+            {hideDone ? 'Show done' : 'Hide done'}
+          </button>
           <button
             type="button"
             aria-pressed={!showRelations}
@@ -332,6 +360,7 @@ export const GanttLayout = ({
         )}
         <GanttTaskList
           tasks={tasks}
+          hideDone={hideDone}
           rowHeight={ROW_HEIGHT}
           onEditTask={onEditTask}
           headerHeight={HEADER_HEIGHT}
@@ -341,11 +370,17 @@ export const GanttLayout = ({
           className="relative overflow-visible rounded-r-xl border border-slate-900 bg-slate-950"
         >
           <div className="overflow-hidden">
-            <GanttHeader labels={headerLabels} columnWidth={columnWidth} height={HEADER_HEIGHT} />
+            <GanttHeader
+              labels={headerLabels}
+              columnWidth={columnWidth}
+              height={HEADER_HEIGHT}
+              hideDone={hideDone}
+              onToggleHideDone={() => setHideDone((s) => !s)}
+            />
             <GanttGrid
               columns={columns.length}
               columnWidth={columnWidth}
-              rowCount={Math.max(tasks.length, 1)}
+              rowCount={Math.max(visibleTasks.length, 1)}
               rowHeight={ROW_HEIGHT}
               headerHeight={HEADER_HEIGHT}
               scale={scale}
@@ -353,7 +388,7 @@ export const GanttLayout = ({
             />
             <div className="relative">
               <GanttRelations
-                tasks={tasks}
+                tasks={visibleTasks}
                 positions={positions}
                   rowHeight={ROW_HEIGHT}
                   headerHeight={HEADER_HEIGHT}
@@ -365,7 +400,7 @@ export const GanttLayout = ({
                   style={{ top: dropIndex * ROW_HEIGHT + ROW_HEIGHT - 2 }}
                 />
               )}
-              {tasks.map((task, index) => (
+              {visibleTasks.map((task, index) => (
                 <GanttRow
                   key={task.id}
                   task={task}
@@ -380,6 +415,7 @@ export const GanttLayout = ({
                   onEditTask={onEditTask}
                   onRowDragStart={handleRowDragStart}
                   isRowDragging={draggingTaskId === task.id}
+                  hideDone={hideDone}
                 />
               ))}
             </div>
@@ -390,7 +426,7 @@ export const GanttLayout = ({
               rangeStart={rangeStart}
               columnWidth={columnWidth}
               scale={scale}
-              height={Math.max(tasks.length, 1) * ROW_HEIGHT}
+              height={Math.max(visibleTasks.length, 1) * ROW_HEIGHT}
               headerHeight={HEADER_HEIGHT}
               onMoveMilestone={onMoveMilestone}
             />

@@ -5,10 +5,10 @@ CRUD endpoints for each model. It is intended for development/testing use.
 """
 
 from fastapi import APIRouter
-from backend.db.database import SessionLocal
+from src.db.database import SessionLocal
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from backend.db.models.base import Base
+from src.db.models.base import Base
 
 
 def get_all_models():

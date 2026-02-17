@@ -1,23 +1,27 @@
 <div align="center">
 
 <p align="center">
-    <img src="frontend/src/assets/logo.png"/>
+    <img src="frontend/src/assets/logo.png" width="160" alt="Lines logo" />
 <p>
 
 <h1 align="center">Open Source Decision-Driven Project Management</h1>
 
 ![Demo](docs/demo-preview.gif)
 
+</div>
+
 ---
 
 ## What is Lines?
 
-**Lines-PM** is a modern open-source project management tool built around **interactive Gantt charts** and **decision-driven planning**.
+**Lines-PM** is not a task manager, but a modern open-source project management tool built around **interactive Gantt charts** and **decision-driven planning**.
 
-It is designed for **Project Managers, founders, and executives** who need to **understand and manipulate project timelines visually**, without getting lost in task micro-management.
+It helps you to answer one question:
+> what happens if I move this?
 
-The core idea is simple:
+The GIF above shows the core interaction: dragging a task to a new date automatically updates all dependent tasks, allowing you to instantly see the impact of your decision.
 
+The idea is simple:
 > Move activities. Change dependencies. Instantly see the impact.
 
 Lines helps you understand **how decisions affect time**.
@@ -46,41 +50,29 @@ Instead of managing tasks, you manage **project flow**.
 
 ---
 
+## Designed For:
+
+* Project managers
+* Founders
+* CTOs
+* Executives
+* Product Leaders
+
+Peole who need to:
+
+* Replan under pressure
+* Explain delays
+* Model impacts before making decisions
+* Tell the story of a project
+
 ## Key Features (Current)
 
-### Projects
-
-* Create, edit, and switch between projects
-
-### Tasks
-
-* Create and reorder tasks
-* Edit status (`todo | in_progress | done`)
-* Inline editing inside the Gantt
-
-### Milestones
-
-* Create, edit, and drag directly on the timeline
-
-### Interactive Gantt Chart
-
-* Drag & drop scheduling
-* Automatic dependency propagation
-* Auto-zoom based on date range
-* Inline editing
-* Dependency chain highlighting on hover
-
-### Synchronized Task List
-
-* Task list always aligned with Gantt rows
-
-### Optimistic UI
-
-* Instant client-side updates with backend confirmation
-
-### Project Updates
-
-* Timeline-based notes attached to projects
+* Interactive Gantt charts with drag-and-drop scheduling
+* Cascading dependency propagation
+* No spaghetti lines - (lock higlighting)
+* Time-first UX
+* Narrative Updates
+* Decision impact modeling
 
 ---
 
@@ -150,7 +142,7 @@ Backend OpenAPI docs:
   * Predictive analytics (e.g. "What happens if we delay Task X by 3 days?")
   * Bottleneck identification (e.g. "Which tasks are most likely to cause delays?")
 
-> Other features and improvements will be added based on user feedback and contributions.
+> Other features and improvements will be added based on user feedback and contributions. Order of implementation may change.
 
 ---
 
@@ -162,9 +154,22 @@ Contributions are welcome.
 * Follow the existing architecture:
 
   * FastAPI backend
+  * PostgreSQL database
   * React frontend
+  
 * Keep changes consistent with the project style
 
+## Branches:
+
+* `main`: Stable production-ready code
+* `dev`: Active development branch (new features, bug fixes)
+
+## Workflow:
+1. All contributions must be made against the `dev` branch
+2. Create a new branch for your feature or bug fix (e.g. `feature/new-feature` or `bugfix/issue-123`)
+3. Open a pull request against `dev` with a clear description of your changes
+4. PRs will be reviewed and merged into `dev` after approval
+5. Periodically, `dev` will be merged into `main` for stable releases
 ---
 
 ## License

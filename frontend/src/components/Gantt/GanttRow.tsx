@@ -29,6 +29,7 @@ interface GanttRowProps {
   onEditTask: (task: Task) => void;
   onRowDragStart: (taskId: number, event: PointerEvent<Element>) => void;
   isRowDragging: boolean;
+  hideDone?: boolean;
 }
 
 export const GanttRow = ({
@@ -44,7 +45,11 @@ export const GanttRow = ({
   onEditTask,
   onRowDragStart,
   isRowDragging,
+  hideDone = false,
 }: GanttRowProps) => {
+  if (hideDone && task.status && task.status.toLowerCase() === "done") {
+    return null;
+  }
   // helper: compute the maximum end date among predecessors (dependencies)
   const getMaxPredecessorEnd = () => {
     if (!task.dependencies || task.dependencies.length === 0) {

@@ -11,11 +11,11 @@ import csv
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from backend.db.database import get_db
-from backend.db.models.task import Task
-from backend.db.models.relation import Relation
+from src.db.database import get_db
+from src.db.models.task import Task
+from src.db.models.relation import Relation
 from collections import deque
-from backend.schemas.task import TaskCreate, TaskOut, TaskReorder, TaskUpdate
+from src.schemas.task import TaskCreate, TaskOut, TaskReorder, TaskUpdate
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 

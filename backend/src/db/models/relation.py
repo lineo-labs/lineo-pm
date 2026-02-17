@@ -7,7 +7,7 @@ are mapped to clearer attribute names on the model.
 
 from sqlalchemy import Column, ForeignKey, Integer, String
 
-from backend.db.models.base import Base
+from src.db.models.base import Base
 
 
 class Relation(Base):

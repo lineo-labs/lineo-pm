@@ -3,10 +3,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from backend.db.database import get_db
-from backend.db.models.milestone import Milestone
-from backend.db.models.project import Project
-from backend.schemas.milestone import MilestoneCreate, MilestoneOut, MilestoneUpdate
+from src.db.database import get_db
+from src.db.models.milestone import Milestone
+from src.db.models.project import Project
+from src.schemas.milestone import MilestoneCreate, MilestoneOut, MilestoneUpdate
 
 router = APIRouter(prefix="/milestones", tags=["milestones"])
 
