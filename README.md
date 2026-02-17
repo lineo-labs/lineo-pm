@@ -4,12 +4,12 @@
     <img src="frontend/src/assets/logo.png" width="160" alt="Lines logo" />
 <p>
 
+
 <h1 align="center">Open Source Decision-Driven Project Management</h1>
 
 ![Demo](docs/demo-preview.gif)
 
 </div>
-
 ---
 
 ## What is Lines?
