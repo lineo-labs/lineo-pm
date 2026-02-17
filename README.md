@@ -3,12 +3,13 @@
 <p align="center">
     <img src="frontend/src/assets/logo.png"/>
 <p>
-</div>
+
 
 <h1 align="center">Open Source Decision-Driven Project Management</h1>
 
 ![Demo](docs/demo-preview.gif)
 
+</div>
 ---
 
 ## What is Lines?
