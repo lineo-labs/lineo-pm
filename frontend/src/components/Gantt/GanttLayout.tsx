@@ -27,6 +27,7 @@ import { GanttBar } from "./GanttBar";
 import { GanttTaskList } from "./GanttTaskList";
 import { GanttRelations } from "./GanttRelations";
 import { computeScenarioDeltas } from "./ganttUtils";
+import { createScenario, createScenarioTask, updateScenarioTask, fetchScenarios, fetchScenarioTasks, deleteScenario } from "../../lib/api";
 
 interface GanttLayoutProps {
   tasks: Task[];
@@ -67,6 +68,13 @@ export const GanttLayout = ({
   // Scenario mode state: temporary local copy of tasks to edit visually
   const [scenarioMode, setScenarioMode] = useState(false);
   const [scenarioTasks, setScenarioTasks] = useState<Task[] | null>(null);
+  const [savingScenario, setSavingScenario] = useState(false);
+  const [showLoadMenu, setShowLoadMenu] = useState(false);
+  const [availableScenarios, setAvailableScenarios] = useState<{ id: number; name: string }[] | null>(null);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
+  const [showSaveName, setShowSaveName] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const tempIdRef = useRef<number>(-1);
 
   
 
@@ -223,6 +231,12 @@ export const GanttLayout = ({
     return tasks.filter((t) => !(t.status && t.status.toLowerCase() === "done"));
   }, [tasks, hideDone]);
 
+  // When in scenario mode, display scenarioTasks (which may include scenario-only tasks)
+  const displayedTasks = useMemo(() => {
+    if (scenarioMode && scenarioTasks) return scenarioTasks;
+    return visibleTasks;
+  }, [scenarioMode, scenarioTasks, visibleTasks]);
+
   const clampIndex = (value: number) => {
     if (visibleTasks.length === 0) {
       return 0;
@@ -237,7 +251,7 @@ export const GanttLayout = ({
 
   // Relations are always visible now; removed toggle state
 
-  const positions = useMemo(() => visibleTasks.map((t) => ({ id: t.id, ...getTaskPosition(t) })), [visibleTasks, columnWidth, scale, rangeStart]);
+  const positions = useMemo(() => displayedTasks.map((t) => ({ id: t.id, ...getTaskPosition(t) })), [displayedTasks, columnWidth, scale, rangeStart]);
 
   // Local handlers that modify only the temporary scenarioTasks state
   const localOnAdjustTaskDates = (taskId: number, mode: "start" | "end", deltaDays: number) => {
@@ -371,7 +385,7 @@ export const GanttLayout = ({
     };
   }, [draggingTaskId, onReorderTasks, tasks]);
 
-  const draggingIndex = draggingTaskId !== null ? visibleTasks.findIndex((t) => t.id === draggingTaskId) : null;
+  const draggingIndex = draggingTaskId !== null ? displayedTasks.findIndex((t) => t.id === draggingTaskId) : null;
 
   return (
     <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
@@ -382,8 +396,8 @@ export const GanttLayout = ({
             Scale: {scale === "month" ? "Months" : scale === "week" ? "Weeks" : "Days"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-xs text-slate-500">{visibleTasks.length} tasks</div>
+        <div className="relative flex items-center gap-3">
+          <div className="text-xs text-slate-500">{displayedTasks.length} tasks</div>
           <button
             type="button"
             onClick={() => setHideDone((s) => !s)}
@@ -417,6 +431,192 @@ export const GanttLayout = ({
           >
             {scenarioMode ? 'Exit scenario' : 'New scenario'}
           </button>
+          
+          <div>
+            <button
+              type="button"
+              onClick={async () => {
+                // always fetch latest scenarios when opening menu
+                const projectId = tasks[0]?.projectId ?? undefined;
+                try {
+                  setShowLoadMenu((s) => !s);
+                  const list = await fetchScenarios(projectId);
+                  const mapped = list.map((s) => ({ id: s.id, name: s.name }));
+                  setAvailableScenarios(mapped);
+                  if (mapped.length > 0) setSelectedScenarioId(mapped[0].id);
+                } catch (err) {
+                  console.error(err);
+                }
+              }}
+              className="text-xs px-2 py-1 rounded-md border bg-indigo-600 text-white border-indigo-700"
+            >
+              Load scenario
+            </button>
+            {showLoadMenu && (
+              <div className="absolute right-0 mt-2 p-3 rounded-md bg-slate-800 border border-slate-700 z-40 origin-top-right">
+                <div className="mb-2 text-sm text-slate-300">Choose scenario</div>
+                <div className="mb-2 block w-64 text-sm p-1 bg-slate-900 border border-slate-700 max-h-60 overflow-auto">
+                  {(availableScenarios ?? []).map((s) => (
+                    <div
+                      key={s.id}
+                      className={`p-2 cursor-pointer text-slate-200 hover:bg-slate-700 flex items-center justify-between ${selectedScenarioId === s.id ? 'bg-slate-700' : ''}`}
+                      onClick={async () => {
+                        try {
+                          const tasksForScenario = await fetchScenarioTasks(s.id);
+                          // map tasks (include scenario-only tasks as well)
+                          const mapped = tasksForScenario.map((st) => ({
+                            id: st.taskId ?? (tempIdRef.current--),
+                            projectId: tasks[0]?.projectId ?? 0,
+                            title: st.title,
+                            description: st.description ?? undefined,
+                            status: st.status as any,
+                            startDate: st.startDate,
+                            endDate: st.endDate,
+                            dependencies: st.dependencies ?? [],
+                            orderIndex: st.orderIndex,
+                            overrides: st.overrides ?? undefined,
+                          }));
+                          setScenarioTasks(mapped as any);
+                          setScenarioMode(true);
+                          setSelectedScenarioId(s.id);
+                          setShowLoadMenu(false);
+                        } catch (err) {
+                          console.error(err);
+                          alert(`Failed to load scenario: ${String(err)}`);
+                        }
+                      }}
+                    >
+                      <div className="flex-1">{s.name}</div>
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const confirmed = confirm(`Delete scenario "${s.name}"?`);
+                          if (!confirmed) return;
+                          try {
+                            const projectId = tasks[0]?.projectId ?? undefined;
+                            await deleteScenario(s.id);
+                            const list = await fetchScenarios(projectId);
+                            const mappedList = list.map((ss) => ({ id: ss.id, name: ss.name }));
+                            setAvailableScenarios(mappedList);
+                            if (mappedList.length > 0) setSelectedScenarioId(mappedList[0].id);
+                            else setSelectedScenarioId(null);
+                            if (scenarioMode && selectedScenarioId === s.id) {
+                              setScenarioMode(false);
+                              setScenarioTasks(null);
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            alert(`Failed to delete scenario: ${String(err)}`);
+                          }
+                        }}
+                        className="ml-2 text-xs px-2 py-1 rounded-md border bg-transparent text-red-400 border-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowLoadMenu(false)}
+                    className="text-xs px-2 py-1 rounded-md border bg-transparent text-slate-200 border-slate-700"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Save name input */}
+          {scenarioMode && (
+            <div className="ml-2">
+              {!showSaveName ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSaveName(true);
+                    setSaveName(`Scenario ${new Date().toISOString().slice(0, 19)}`);
+                  }}
+                  className="text-xs px-2 py-1 rounded-md border bg-sky-500 text-white border-sky-600"
+                >
+                  Save scenario
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={saveName}
+                    onChange={(e) => setSaveName(e.target.value)}
+                    className="text-sm p-1 rounded-md bg-slate-900 border border-slate-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!saveName || !scenarioTasks) return;
+                      try {
+                        setSavingScenario(true);
+                        const projectId = tasks[0]?.projectId ?? 0;
+                        const scenario = await createScenario({ projectId, name: saveName, description: null });
+
+                        const mapping = new Map<number, number>(); // local id -> created scenario_task id
+                        // create scenario tasks in order
+                        for (const [idx, st] of scenarioTasks.entries()) {
+                          const localId = st.id;
+                          const payload = {
+                            taskId: localId > 0 ? localId : null,
+                            title: st.title,
+                            description: st.description ?? null,
+                            status: st.status,
+                            startDate: st.startDate,
+                            endDate: st.endDate,
+                            orderIndex: st.orderIndex ?? idx + 1,
+                            dependencies: [],
+                            overrides: (st as any).overrides ?? null,
+                          } as const;
+
+                          const created = await createScenarioTask(scenario.id, payload as any);
+                          mapping.set(localId, created.id);
+                        }
+
+                        // update dependencies
+                        for (const st of scenarioTasks) {
+                          const localId = st.id;
+                          const newId = mapping.get(localId);
+                          if (!newId) continue;
+                          const deps = (st.dependencies || [])
+                            .map((d) => mapping.get(d))
+                            .filter(Boolean) as number[];
+                          if (deps.length > 0) {
+                            await updateScenarioTask(newId, { dependencies: deps });
+                          }
+                        }
+
+                        setScenarioMode(false);
+                        setScenarioTasks(null);
+                        setShowSaveName(false);
+                      } catch (err) {
+                        console.error(err);
+                        alert(`Failed to save scenario: ${String(err)}`);
+                      } finally {
+                        setSavingScenario(false);
+                      }
+                    }}
+                    className="text-xs px-2 py-1 rounded-md border bg-emerald-500 text-white border-emerald-600"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSaveName(false)}
+                    className="text-xs px-2 py-1 rounded-md border bg-transparent text-slate-200 border-slate-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         
@@ -491,7 +691,7 @@ export const GanttLayout = ({
                   style={{ top: dropIndex * ROW_HEIGHT + ROW_HEIGHT - 2 }}
                 />
               )}
-              {visibleTasks.map((task, index) => {
+              {displayedTasks.map((task, index) => {
                 // default: when NOT in scenario mode, render the regular interactive row
                 if (!scenarioMode) {
                   return (
@@ -515,81 +715,61 @@ export const GanttLayout = ({
                   );
                 }
 
-                // In scenario mode: render the interactive scenario row in-flow,
-                // and render a thin, immobile base bar absolutely underneath it to show the original state.
-                const scenarioTask = scenarioTasks ? scenarioTasks.find((st) => st.id === task.id) : null;
-                const basePos = getTaskPosition(task);
-                const scenarioPos = scenarioTask ? getTaskPosition(scenarioTask) : null;
+                // scenarioMode: render scenario task directly. If it maps to a baseline
+                // task, we render a faint base bar underneath.
+                const scenarioTask = task; // already from scenarioTasks when in scenarioMode
+                const baseTask = tasks.find((t) => t.id === scenarioTask.id);
+                const basePos = baseTask ? getTaskPosition(baseTask) : { offset: 0, width: 0 };
+                const scenarioPos = getTaskPosition(scenarioTask);
 
                 return (
                   <div key={task.id} style={{ position: "relative", height: ROW_HEIGHT }}>
-                    {/* scenario interactive row in flow */}
-                    {scenarioTask ? (
-                      <GanttRow
-                        key={`scenario-${task.id}`}
-                        variant="scenario"
-                        task={scenarioTask}
-                        rowIndex={index}
-                        rowHeight={ROW_HEIGHT}
-                        position={scenarioPos ?? basePos}
-                        columnWidth={columnWidth}
-                        scale={scale}
-                        taskMap={scenarioTaskMap}
-                        onAdjustTaskDates={localOnAdjustTaskDates}
-                        onMoveTaskDates={localOnMoveTaskDates}
-                        onEditTask={onEditTask}
-                        onRowDragStart={noopRowDrag}
-                        isRowDragging={false}
-                        hideDone={hideDone}
-                      />
-                    ) : (
-                      // fallback to main task if scenario task missing
-                      <GanttRow
-                        key={task.id}
-                        variant="scenario"
-                        task={task}
-                        rowIndex={index}
-                        rowHeight={ROW_HEIGHT}
-                        position={basePos}
-                        columnWidth={columnWidth}
-                        scale={scale}
-                        taskMap={taskMap}
-                        onAdjustTaskDates={noopAdjust}
-                        onMoveTaskDates={noopMove}
-                        onEditTask={onEditTask}
-                        onRowDragStart={noopRowDrag}
-                        isRowDragging={false}
-                        hideDone={hideDone}
-                      />
-                    )}
+                    <GanttRow
+                      key={`scenario-${task.id}`}
+                      variant="scenario"
+                      task={scenarioTask}
+                      rowIndex={index}
+                      rowHeight={ROW_HEIGHT}
+                      position={scenarioPos}
+                      columnWidth={columnWidth}
+                      scale={scale}
+                      taskMap={scenarioTaskMap}
+                      onAdjustTaskDates={localOnAdjustTaskDates}
+                      onMoveTaskDates={localOnMoveTaskDates}
+                      onEditTask={onEditTask}
+                      onRowDragStart={noopRowDrag}
+                      isRowDragging={false}
+                      hideDone={hideDone}
+                    />
 
-                    {/* base bar rendered overlapping bottom of the scenario task row (overlay at lower part) */}
-                    <div
-                      aria-hidden
-                      style={{
-                        position: "absolute",
-                        top: ROW_HEIGHT - 12,
-                        left: basePos.offset,
-                        width: basePos.width,
-                        pointerEvents: "none",
-                        zIndex: 25,
-                      }}
-                    >
-                      <GanttBar
-                        title={task.title}
-                        offset={0}
-                        width={basePos.width}
-                        isDragging={false}
-                        isRowDragging={false}
-                        onBarPointerDown={() => {}}
-                        onPointerMove={() => {}}
-                        onPointerUp={() => {}}
-                        onPointerCancel={() => {}}
-                        onResizeStartPointerDown={() => {}}
-                        onResizeEndPointerDown={() => {}}
-                        variant="base"
-                      />
-                    </div>
+                    {baseTask && (
+                      <div
+                        aria-hidden
+                        style={{
+                          position: "absolute",
+                          top: ROW_HEIGHT - 12,
+                          left: basePos.offset,
+                          width: basePos.width,
+                          pointerEvents: "none",
+                          zIndex: 25,
+                        }}
+                      >
+                        <GanttBar
+                          title={baseTask.title}
+                          offset={0}
+                          width={basePos.width}
+                          isDragging={false}
+                          isRowDragging={false}
+                          onBarPointerDown={() => {}}
+                          onPointerMove={() => {}}
+                          onPointerUp={() => {}}
+                          onPointerCancel={() => {}}
+                          onResizeStartPointerDown={() => {}}
+                          onResizeEndPointerDown={() => {}}
+                          variant="base"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}

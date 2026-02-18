@@ -35,3 +35,25 @@ export interface Milestone {
   description?: string;
   targetDate: string;
 }
+
+export interface Scenario {
+  id: number;
+  projectId: number;
+  name: string;
+  description?: string;
+  createdAt: string;
+}
+
+export interface ScenarioTask {
+  id: number;
+  scenarioId: number;
+  taskId?: number;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  startDate: string;
+  endDate: string;
+  dependencies: number[];
+  overrides?: Record<string, any> | null;
+  orderIndex?: number;
+}
