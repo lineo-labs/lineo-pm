@@ -21,6 +21,7 @@ import { GanttGrid } from "./GanttGrid";
 import { GanttHeader } from "./GanttHeader";
 import { GanttMilestones } from "./GanttMilestones";
 import { GanttRow } from "./GanttRow";
+import { GanttBar } from "./GanttBar";
 import { GanttTaskList } from "./GanttTaskList";
 import { GanttRelations } from "./GanttRelations";
 
@@ -59,6 +60,10 @@ export const GanttLayout = ({
   const dragPointerIdRef = useRef<number | null>(null);
   const dragStartIndexRef = useRef<number>(0);
   const dropIndexRef = useRef<number | null>(null);
+
+  // Scenario mode state: temporary local copy of tasks to edit visually
+  const [scenarioMode, setScenarioMode] = useState(false);
+  const [scenarioTasks, setScenarioTasks] = useState<Task[] | null>(null);
 
   const clampIndex = (value: number) => {
     if (visibleTasks.length === 0) {
@@ -195,6 +200,11 @@ export const GanttLayout = ({
 
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
 
+  const scenarioTaskMap = useMemo(() => {
+    if (!scenarioTasks) return new Map<number, Task>();
+    return new Map(scenarioTasks.map((t) => [t.id, t]));
+  }, [scenarioTasks]);
+
   const visibleTasks = useMemo(() => {
     if (!hideDone) return tasks;
     return tasks.filter((t) => !(t.status && t.status.toLowerCase() === "done"));
@@ -203,6 +213,43 @@ export const GanttLayout = ({
   // Relations are always visible now; removed toggle state
 
   const positions = useMemo(() => visibleTasks.map((t) => ({ id: t.id, ...getTaskPosition(t) })), [visibleTasks, columnWidth, scale, rangeStart]);
+
+  // Local handlers that modify only the temporary scenarioTasks state
+  const localOnAdjustTaskDates = (taskId: number, mode: "start" | "end", deltaDays: number) => {
+    setScenarioTasks((prev) => {
+      if (!prev) return prev;
+      return prev.map((t) => {
+        if (t.id !== taskId) return t;
+        const s = parseISODate(t.startDate);
+        const e = parseISODate(t.endDate);
+        if (mode === "start") {
+          const ns = addDays(s, deltaDays);
+          return { ...t, startDate: ns.toISOString().slice(0, 10) };
+        }
+        const ne = addDays(e, deltaDays);
+        return { ...t, endDate: ne.toISOString().slice(0, 10) };
+      });
+    });
+  };
+
+  const localOnMoveTaskDates = (taskId: number, deltaDays: number) => {
+    setScenarioTasks((prev) => {
+      if (!prev) return prev;
+      return prev.map((t) => {
+        if (t.id !== taskId) return t;
+        const s = parseISODate(t.startDate);
+        const e = parseISODate(t.endDate);
+        const ns = addDays(s, deltaDays);
+        const ne = addDays(e, deltaDays);
+        return { ...t, startDate: ns.toISOString().slice(0, 10), endDate: ne.toISOString().slice(0, 10) };
+      });
+    });
+  };
+
+  // typed no-op handlers for base vs scenario wiring
+  const noopAdjust = (taskId: number, mode: "start" | "end", deltaDays: number) => {};
+  const noopMove = (taskId: number, deltaDays: number) => {};
+  const noopRowDrag = (taskId: number, _event: any) => {};
 
   const handleRowDragStart = (taskId: number, event: PointerEvent<Element>) => {
     const index = tasks.findIndex((task) => task.id === taskId);
@@ -328,6 +375,23 @@ export const GanttLayout = ({
           >
             {showRelations ? 'Hide relations' : 'Show relations'}
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!scenarioMode) {
+                // enter scenario: clone tasks into temporary state
+                setScenarioTasks(tasks.map((t) => ({ ...t })));
+                setScenarioMode(true);
+              } else {
+                // exit scenario and discard
+                setScenarioMode(false);
+                setScenarioTasks(null);
+              }
+            }}
+            className={`text-xs px-2 py-1 rounded-md border ${scenarioMode ? 'bg-red-600 text-white border-red-700' : 'bg-emerald-500 text-white border-emerald-600'}`}
+          >
+            {scenarioMode ? 'Exit scenario' : 'New scenario'}
+          </button>
         </div>
       </div>
 
@@ -400,24 +464,108 @@ export const GanttLayout = ({
                   style={{ top: dropIndex * ROW_HEIGHT + ROW_HEIGHT - 2 }}
                 />
               )}
-              {visibleTasks.map((task, index) => (
-                <GanttRow
-                  key={task.id}
-                  task={task}
-                  rowIndex={index}
-                  rowHeight={ROW_HEIGHT}
-                  position={getTaskPosition(task)}
-                  columnWidth={columnWidth}
-                  scale={scale}
-                  taskMap={taskMap}
-                  onAdjustTaskDates={onAdjustTaskDates}
-                  onMoveTaskDates={onMoveTaskDates}
-                  onEditTask={onEditTask}
-                  onRowDragStart={handleRowDragStart}
-                  isRowDragging={draggingTaskId === task.id}
-                  hideDone={hideDone}
-                />
-              ))}
+              {visibleTasks.map((task, index) => {
+                // default: when NOT in scenario mode, render the regular interactive row
+                if (!scenarioMode) {
+                  return (
+                    <GanttRow
+                      key={task.id}
+                      variant="scenario"
+                      task={task}
+                      rowIndex={index}
+                      rowHeight={ROW_HEIGHT}
+                      position={getTaskPosition(task)}
+                      columnWidth={columnWidth}
+                      scale={scale}
+                      taskMap={taskMap}
+                      onAdjustTaskDates={onAdjustTaskDates}
+                      onMoveTaskDates={onMoveTaskDates}
+                      onEditTask={onEditTask}
+                      onRowDragStart={handleRowDragStart}
+                      isRowDragging={draggingTaskId === task.id}
+                      hideDone={hideDone}
+                    />
+                  );
+                }
+
+                // In scenario mode: render the interactive scenario row in-flow,
+                // and render a thin, immobile base bar absolutely underneath it to show the original state.
+                const scenarioTask = scenarioTasks ? scenarioTasks.find((st) => st.id === task.id) : null;
+                const basePos = getTaskPosition(task);
+                const scenarioPos = scenarioTask ? getTaskPosition(scenarioTask) : null;
+
+                return (
+                  <div key={task.id} style={{ position: "relative", height: ROW_HEIGHT }}>
+                    {/* scenario interactive row in flow */}
+                    {scenarioTask ? (
+                      <GanttRow
+                        key={`scenario-${task.id}`}
+                        variant="scenario"
+                        task={scenarioTask}
+                        rowIndex={index}
+                        rowHeight={ROW_HEIGHT}
+                        position={scenarioPos ?? basePos}
+                        columnWidth={columnWidth}
+                        scale={scale}
+                        taskMap={scenarioTaskMap}
+                        onAdjustTaskDates={localOnAdjustTaskDates}
+                        onMoveTaskDates={localOnMoveTaskDates}
+                        onEditTask={onEditTask}
+                        onRowDragStart={noopRowDrag}
+                        isRowDragging={false}
+                        hideDone={hideDone}
+                      />
+                    ) : (
+                      // fallback to main task if scenario task missing
+                      <GanttRow
+                        key={task.id}
+                        variant="scenario"
+                        task={task}
+                        rowIndex={index}
+                        rowHeight={ROW_HEIGHT}
+                        position={basePos}
+                        columnWidth={columnWidth}
+                        scale={scale}
+                        taskMap={taskMap}
+                        onAdjustTaskDates={noopAdjust}
+                        onMoveTaskDates={noopMove}
+                        onEditTask={onEditTask}
+                        onRowDragStart={noopRowDrag}
+                        isRowDragging={false}
+                        hideDone={hideDone}
+                      />
+                    )}
+
+                    {/* base bar rendered overlapping bottom of the scenario task row (overlay at lower part) */}
+                    <div
+                      aria-hidden
+                      style={{
+                        position: "absolute",
+                        top: ROW_HEIGHT - 12,
+                        left: basePos.offset,
+                        width: basePos.width,
+                        pointerEvents: "none",
+                        zIndex: 25,
+                      }}
+                    >
+                      <GanttBar
+                        title={task.title}
+                        offset={0}
+                        width={basePos.width}
+                        isDragging={false}
+                        isRowDragging={false}
+                        onBarPointerDown={() => {}}
+                        onPointerMove={() => {}}
+                        onPointerUp={() => {}}
+                        onPointerCancel={() => {}}
+                        onResizeStartPointerDown={() => {}}
+                        onResizeEndPointerDown={() => {}}
+                        variant="base"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
           {milestones.length > 0 && (

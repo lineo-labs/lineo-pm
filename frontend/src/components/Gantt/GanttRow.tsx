@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import type { Task } from "../../lib/types";
 import type { DateScale } from "../../lib/dateScale";
 import {
-  addMonths,
   diffInDaysSigned,
   parseISODate,
   endOfMonth,
@@ -30,6 +29,7 @@ interface GanttRowProps {
   onRowDragStart: (taskId: number, event: PointerEvent<Element>) => void;
   isRowDragging: boolean;
   hideDone?: boolean;
+  variant?: "base" | "scenario";
 }
 
 export const GanttRow = ({
@@ -46,6 +46,7 @@ export const GanttRow = ({
   onRowDragStart,
   isRowDragging,
   hideDone = false,
+  variant = "scenario",
 }: GanttRowProps) => {
   if (hideDone && task.status && task.status.toLowerCase() === "done") {
     return null;
@@ -197,6 +198,10 @@ export const GanttRow = ({
   };
 
   const handleRowPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+  // do not allow row reordering on the thin "base" variant; allow for interactive rows
+  if (variant === "base") {
+    return;
+  }
     if (event.target !== event.currentTarget) {
       return;
     }
@@ -305,6 +310,7 @@ export const GanttRow = ({
         onPointerCancel={handlePointerCancelLocal}
         onResizeStartPointerDown={handlePointerDown("start")}
         onResizeEndPointerDown={handlePointerDown("end")}
+        variant={variant}
         
       />
       {dragging && previewLabel && (
