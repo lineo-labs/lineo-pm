@@ -15,6 +15,8 @@ import {
   startOfWeek,
   endOfMonth,
   addDays,
+  diffInDaysSigned,
+  businessDaysBetweenInclusive,
 } from "../../lib/dateRange";
 import { getAutoScale, getRangeScale } from "../../lib/dateScale";
 import { GanttGrid } from "./GanttGrid";
@@ -24,6 +26,7 @@ import { GanttRow } from "./GanttRow";
 import { GanttBar } from "./GanttBar";
 import { GanttTaskList } from "./GanttTaskList";
 import { GanttRelations } from "./GanttRelations";
+import { computeScenarioDeltas } from "./ganttUtils";
 
 interface GanttLayoutProps {
   tasks: Task[];
@@ -65,12 +68,7 @@ export const GanttLayout = ({
   const [scenarioMode, setScenarioMode] = useState(false);
   const [scenarioTasks, setScenarioTasks] = useState<Task[] | null>(null);
 
-  const clampIndex = (value: number) => {
-    if (visibleTasks.length === 0) {
-      return 0;
-    }
-    return Math.max(0, Math.min(visibleTasks.length - 1, value));
-  };
+  
 
   useEffect(() => {
     const element = timelineRef.current;
@@ -91,13 +89,26 @@ export const GanttLayout = ({
 
   const { start, end } = useMemo(() => {
     const dates: Date[] = [];
-    tasks.forEach((task) => {
-      dates.push(parseISODate(task.startDate));
-      dates.push(parseISODate(task.endDate));
-    });
-    milestones.forEach((milestone) => {
-      dates.push(parseISODate(milestone.targetDate));
-    });
+
+    const pushIfValid = (d: Date | null | undefined) => {
+      if (d instanceof Date && !isNaN(d.getTime())) dates.push(d);
+    };
+
+    if (scenarioMode && scenarioTasks) {
+      for (const t of scenarioTasks) {
+        pushIfValid(parseISODate(t.startDate));
+        pushIfValid(parseISODate(t.endDate));
+      }
+    } else {
+      for (const t of tasks ?? []) {
+        pushIfValid(parseISODate(t.startDate));
+        pushIfValid(parseISODate(t.endDate));
+      }
+    }
+
+    for (const m of milestones ?? []) {
+      pushIfValid(parseISODate(m.targetDate || m.dueDate));
+    }
 
     if (dates.length === 0) {
       const today = new Date();
@@ -109,7 +120,7 @@ export const GanttLayout = ({
     const rawEnd = new Date(Math.max(...dates.map((date) => date.getTime())));
     // always pad two days before start and two days after end
     return { start: addDays(rawStart, -2), end: addDays(rawEnd, 2) };
-  }, [milestones, tasks]);
+  }, [milestones, tasks, scenarioMode, scenarioTasks]);
 
   const fallbackScale = getRangeScale(start, end);
   const autoScale = useMemo(() => {
@@ -205,10 +216,24 @@ export const GanttLayout = ({
     return new Map(scenarioTasks.map((t) => [t.id, t]));
   }, [scenarioTasks]);
 
+  
+
   const visibleTasks = useMemo(() => {
     if (!hideDone) return tasks;
     return tasks.filter((t) => !(t.status && t.status.toLowerCase() === "done"));
   }, [tasks, hideDone]);
+
+  const clampIndex = (value: number) => {
+    if (visibleTasks.length === 0) {
+      return 0;
+    }
+    return Math.max(0, Math.min(visibleTasks.length - 1, value));
+  };
+
+  const scenarioDeltas = useMemo(() => {
+    if (!scenarioMode) return null;
+    return computeScenarioDeltas(visibleTasks, scenarioTasks);
+  }, [scenarioMode, scenarioTasks, visibleTasks]);
 
   // Relations are always visible now; removed toggle state
 
@@ -393,6 +418,8 @@ export const GanttLayout = ({
             {scenarioMode ? 'Exit scenario' : 'New scenario'}
           </button>
         </div>
+
+        
       </div>
 
       <div ref={layoutRef} className="relative grid grid-cols-[260px_1fr] gap-0">
@@ -568,6 +595,41 @@ export const GanttLayout = ({
               })}
             </div>
           </div>
+
+          {/* Scenario deltas panel rendered under the Gantt timeline when scenario active */}
+          {scenarioMode && scenarioDeltas && (
+            <div className="mt-3 px-4">
+              <div className="rounded-md border border-slate-900 bg-slate-900/30 p-3 text-sm text-slate-200">
+                <div className="flex gap-6 items-center">
+                  <div>
+                    <div className="text-xs text-slate-400">Delta work days</div>
+                    <div className="font-medium">{scenarioDeltas.totalDeltaDays >= 0 ? '+' : ''}{scenarioDeltas.totalDeltaDays}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">Start delta (scenario vs baseline)</div>
+                    <div className="font-medium">
+                      {scenarioDeltas.deltaStart < 0
+                        ? `${Math.abs(scenarioDeltas.deltaStart)} days earlier`
+                        : scenarioDeltas.deltaStart > 0
+                        ? `${scenarioDeltas.deltaStart} days later`
+                        : 'no change'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">End delta (scenario vs baseline)</div>
+                    <div className="font-medium">
+                      {scenarioDeltas.deltaEnd > 0
+                        ? `${scenarioDeltas.deltaEnd} days later`
+                        : scenarioDeltas.deltaEnd < 0
+                        ? `${Math.abs(scenarioDeltas.deltaEnd)} days earlier`
+                        : 'no change'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {milestones.length > 0 && (
             <GanttMilestones
               milestones={milestones}

@@ -80,3 +80,19 @@ export const getMonthColumns = (start: Date, end: Date) => {
   const months = diffInMonths(alignedStart, alignedEnd) + 1;
   return Array.from({ length: months }, (_, index) => addMonths(alignedStart, index));
 };
+
+// Count business days (Mon-Fri) between two dates inclusive, using UTC days.
+export const businessDaysBetweenInclusive = (start: Date, end: Date) => {
+  if (end.getTime() < start.getTime()) return 0;
+  let count = 0;
+  const cur = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+  const last = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+  while (cur.getTime() <= last.getTime()) {
+    const dow = cur.getUTCDay();
+    if (dow !== 0 && dow !== 6) {
+      count += 1;
+    }
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return count;
+};
