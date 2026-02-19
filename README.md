@@ -10,7 +10,6 @@
 ![Demo](docs/demo-preview.gif)
 
 </div>
----
 
 ## What is lineo?
 
