@@ -41,7 +41,7 @@ export const Sidebar = ({
       <div>
         <img
           src={logo}
-          alt="lines-pm"
+          alt="lineo-pm"
           className="h-10 w-auto"
         />
         <p className="mt-1 text-xs text-slate-400">Time-centric, easy, fast.</p>

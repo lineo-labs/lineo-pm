@@ -25,6 +25,7 @@ import { GanttMilestones } from "./GanttMilestones";
 import { GanttRow } from "./GanttRow";
 import { GanttBar } from "./GanttBar";
 import { GanttTaskList } from "./GanttTaskList";
+import { TaskEditDialog } from "../TaskEditDialog";
 import { GanttRelations } from "./GanttRelations";
 import { computeScenarioDeltas } from "./ganttUtils";
 import { createScenario, createScenarioTask, updateScenarioTask, fetchScenarios, fetchScenarioTasks, deleteScenario } from "../../lib/api";
@@ -68,6 +69,7 @@ export const GanttLayout = ({
   // Scenario mode state: temporary local copy of tasks to edit visually
   const [scenarioMode, setScenarioMode] = useState(false);
   const [scenarioTasks, setScenarioTasks] = useState<Task[] | null>(null);
+  const [editingScenarioTask, setEditingScenarioTask] = useState<Task | null>(null);
   const [savingScenario, setSavingScenario] = useState(false);
   const [showLoadMenu, setShowLoadMenu] = useState(false);
   const [availableScenarios, setAvailableScenarios] = useState<{ id: number; name: string }[] | null>(null);
@@ -123,6 +125,7 @@ export const GanttLayout = ({
       const s = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
       return { start: s, end: addDays(s, 14) };
     }
+      
 
     const rawStart = new Date(Math.min(...dates.map((date) => date.getTime())));
     const rawEnd = new Date(Math.max(...dates.map((date) => date.getTime())));
@@ -227,29 +230,12 @@ export const GanttLayout = ({
   const isScenarioTaskChanged = (scenarioTask: Task, baseTask?: Task): boolean => {
     if (!baseTask) return true;
 
-    if (scenarioTask.title !== baseTask.title) return true;
-    if ((scenarioTask.description ?? undefined) !== (baseTask.description ?? undefined)) return true;
-    if ((scenarioTask.status ?? undefined) !== (baseTask.status ?? undefined)) return true;
-
     const sStart = parseISODate(scenarioTask.startDate)?.getTime();
     const bStart = parseISODate(baseTask.startDate)?.getTime();
-    if (sStart !== bStart) return true;
-
     const sEnd = parseISODate(scenarioTask.endDate)?.getTime();
     const bEnd = parseISODate(baseTask.endDate)?.getTime();
-    if (sEnd !== bEnd) return true;
 
-    if ((scenarioTask.orderIndex ?? undefined) !== (baseTask.orderIndex ?? undefined)) return true;
-
-    const sDeps = JSON.stringify(scenarioTask.dependencies ?? []);
-    const bDeps = JSON.stringify(baseTask.dependencies ?? []);
-    if (sDeps !== bDeps) return true;
-
-    const sOver = JSON.stringify((scenarioTask as any).overrides ?? null);
-    const bOver = JSON.stringify((baseTask as any).overrides ?? null);
-    if (sOver !== bOver) return true;
-
-    return false;
+    return sStart !== bStart || sEnd !== bEnd;
   };
 
   
@@ -258,6 +244,16 @@ export const GanttLayout = ({
     if (!hideDone) return tasks;
     return tasks.filter((t) => !(t.status && t.status.toLowerCase() === "done"));
   }, [tasks, hideDone]);
+
+  // left column list: when in scenario mode, merge baseline tasks with scenario edits
+  const leftColumnTasks = useMemo(() => {
+    if (!scenarioMode || !scenarioTasks) return visibleTasks;
+    const map = new Map<number, Task>();
+    for (const t of tasks) map.set(t.id, t);
+    // overlay scenario tasks (replace existing or add new scenario-only tasks)
+    for (const st of scenarioTasks) map.set(st.id, st);
+    return Array.from(map.values()).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  }, [scenarioMode, scenarioTasks, tasks, visibleTasks]);
 
   // When in scenario mode, display scenarioTasks (which may include scenario-only tasks)
   const displayedTasks = useMemo(() => {
@@ -311,6 +307,39 @@ export const GanttLayout = ({
         return { ...t, startDate: ns.toISOString().slice(0, 10), endDate: ne.toISOString().slice(0, 10) };
       });
     });
+  };
+
+  const createScenarioTaskLocal = () => {
+    const localId = tempIdRef.current--;
+    const projectId = tasks[0]?.projectId ?? 0;
+    const today = new Date();
+    const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    const startDate = start.toISOString().slice(0, 10);
+    const endDate = addDays(start, 2).toISOString().slice(0, 10);
+
+    const newTask: Task = {
+      id: localId,
+      projectId,
+      title: "New task",
+      description: undefined,
+      status: "todo",
+      startDate,
+      endDate,
+      dependencies: [],
+      orderIndex: 0,
+      overrides: undefined,
+    } as Task;
+
+    setScenarioTasks((prev) => {
+      const list = prev ? [...prev] : [];
+      const maxOrder = list.reduce((m, t) => Math.max(m, t.orderIndex ?? 0), 0);
+      const orderIndex = maxOrder + 1;
+      newTask.orderIndex = orderIndex;
+      return [...list, newTask];
+    });
+
+    // open editor for the newly created scenario task
+    setEditingScenarioTask({ ...newTask });
   };
 
   // typed no-op handlers for base vs scenario wiring
@@ -459,6 +488,15 @@ export const GanttLayout = ({
           >
             {scenarioMode ? 'Exit scenario' : 'New scenario'}
           </button>
+          {scenarioMode && (
+            <button
+              type="button"
+              onClick={() => createScenarioTaskLocal()}
+              className="text-xs px-2 py-1 rounded-md border bg-sky-500 text-white border-sky-600"
+            >
+              New task
+            </button>
+          )}
           
           <div>
             <button
@@ -678,10 +716,21 @@ export const GanttLayout = ({
           />
         )}
         <GanttTaskList
-          tasks={tasks}
+          tasks={leftColumnTasks}
           hideDone={hideDone}
           rowHeight={ROW_HEIGHT}
-          onEditTask={onEditTask}
+          onEditTask={(task) => {
+            // if in scenario mode and this task exists in scenarioTasks, open local scenario editor
+            if (scenarioMode && scenarioTasks) {
+              const st = scenarioTasks.find((t) => t.id === task.id);
+              if (st) {
+                setEditingScenarioTask({ ...st });
+                return;
+              }
+            }
+            // otherwise fall back to parent handler
+            onEditTask(task);
+          }}
           headerHeight={HEADER_HEIGHT}
         />
         <div
@@ -764,7 +813,9 @@ export const GanttLayout = ({
                       taskMap={scenarioTaskMap}
                       onAdjustTaskDates={localOnAdjustTaskDates}
                       onMoveTaskDates={localOnMoveTaskDates}
-                      onEditTask={onEditTask}
+                      onEditTask={(t) => {
+                        setEditingScenarioTask({ ...scenarioTask });
+                      }}
                       onRowDragStart={noopRowDrag}
                       isRowDragging={false}
                       hideDone={hideDone}
@@ -851,6 +902,46 @@ export const GanttLayout = ({
           )}
         </div>
       </div>
+      {/* Scenario task editor (local-only) */}
+      {scenarioMode && (
+        <TaskEditDialog
+          task={editingScenarioTask}
+          open={!!editingScenarioTask}
+          onClose={() => setEditingScenarioTask(null)}
+          onCreateUpdate={async (_payload) => {
+            // no-op for local scenario updates for now
+            return;
+          }}
+          onSave={(taskId, payload) => {
+            setScenarioTasks((prev) => {
+              if (!prev) return prev;
+              return prev.map((t) => {
+                if (t.id !== taskId) return t;
+                return {
+                  ...t,
+                  title: payload.title,
+                  description: payload.description ?? undefined,
+                  status: payload.status,
+                  startDate: payload.startDate,
+                  endDate: payload.endDate,
+                  dependencies: payload.dependencies ?? [],
+                } as Task;
+              });
+            });
+            setEditingScenarioTask(null);
+          }}
+          onDelete={async (taskId) => {
+            setScenarioTasks((prev) => (prev ? prev.filter((t) => t.id !== taskId) : prev));
+            setEditingScenarioTask(null);
+          }}
+          onDependencyChange={(taskId, dependencies) => {
+            setScenarioTasks((prev) => {
+              if (!prev) return prev;
+              return prev.map((t) => (t.id === taskId ? { ...t, dependencies } : t));
+            });
+          }}
+        />
+      )}
     </section>
   );
 };

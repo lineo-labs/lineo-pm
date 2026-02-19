@@ -297,7 +297,15 @@ export const GanttRow = ({
   })();
 
   return (
-    <div className="relative" style={{ height: rowHeight }} onPointerDown={handleRowPointerDown}>
+    <div
+      className="relative"
+      style={{ height: rowHeight }}
+      onPointerDown={handleRowPointerDown}
+      onDoubleClick={() => {
+        if (variant === "base") return;
+        onEditTask(task);
+      }}
+    >
       <GanttBar
         title={task.title}
         offset={visualOffset}
