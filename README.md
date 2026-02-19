@@ -1,7 +1,7 @@
 <div align="center">
 
 <p align="center">
-    <img src="frontend/src/assets/logo.png" width="160" alt="Lines logo" />
+    <img src="frontend/src/assets/logo.png" width="160" alt="lineo logo" />
 <p>
 
 
@@ -12,9 +12,9 @@
 </div>
 ---
 
-## What is Lines?
+## What is lineo?
 
-**Lines-PM** is not a task manager, but a modern open-source project management tool built around **interactive Gantt charts** and **decision-driven planning**.
+**lineo-PM** is not a task manager, but a modern open-source project management tool built around **interactive Gantt charts** and **decision-driven planning**.
 
 It helps you to answer one question:
 > what happens if I move this?
@@ -24,21 +24,21 @@ The GIF above shows the core interaction: dragging a task to a new date automati
 The idea is simple:
 > Move activities. Change dependencies. Instantly see the impact.
 
-Lines helps you understand **how decisions affect time**.
+lineo helps you understand **how decisions affect time**.
 
 Hover over a task to highlight its dependency chain and immediately visualize project dynamics.
 
 ---
 
-## Why Lines?
+## Why lineo?
 
 Most project tools focus on task tracking, gamification, or Kanban workflows.
 
-Lines focuses on **decision support**.
+lineo focuses on **decision support**.
 
 It is **time-first**, not board-first.
 
-With Lines you can:
+With lineo you can:
 
 * Visualize the entire project timeline at a glance
 * Adjust schedules using intuitive drag & drop
@@ -69,7 +69,7 @@ Peole who need to:
 
 * Interactive Gantt charts with drag-and-drop scheduling
 * Cascading dependency propagation
-* No spaghetti lines - (lock higlighting)
+* No spaghetti lineo - (lock higlighting)
 * Time-first UX
 * Narrative Updates
 * Decision impact modeling
@@ -81,8 +81,8 @@ Peole who need to:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-org/lines-pm.git
-cd lines-pm
+git clone https://github.com/your-org/lineo-pm.git
+cd lineo-pm
 ```
 
 ### 2. Start development containers

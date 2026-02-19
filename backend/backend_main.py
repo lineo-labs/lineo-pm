@@ -1,4 +1,4 @@
-"""FastAPI application bootstrap and startup tasks for Lines PM backend.
+"""FastAPI application bootstrap and startup tasks for lineo PM backend.
 
 This module configures the FastAPI app, CORS middleware and registers
 startup actions used to initialise the database and seed sample data.
@@ -17,7 +17,7 @@ from src.seed import (
 )
 
 
-app = FastAPI(title="Lines PM Backend")
+app = FastAPI(title="lineo PM Backend")
 app.add_middleware(
 	CORSMiddleware,
 	allow_origins=["*"],

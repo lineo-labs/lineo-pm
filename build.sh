@@ -1,7 +1,7 @@
 #!/bin/bash
 
-CONTAINER_NAME="lines-pm-dev"
-IMAGE_NAME="lines-pm-dev-image"
+CONTAINER_NAME="lineo-pm-dev"
+IMAGE_NAME="lineo-pm-dev-image"
 
 
 if [ "$1" == "shell" ]; then
@@ -24,5 +24,5 @@ if [ "$1" == "shell" ]; then
 fi
 
 echo "👉 Building production image…"
-docker build -t lines-pm .
+docker build -t lineo-pm .
 echo "✔ Build complete"

@@ -369,3 +369,156 @@ export const createUpdate = async (payload: {
   const data = await handleResponse<UpdateDto>(response);
   return toUpdate(data);
 };
+
+// --- Scenarios API ---
+
+interface ScenarioDto {
+  id: number;
+  project_id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+}
+
+interface ScenarioTaskDto {
+  id: number;
+  scenario_id: number;
+  task_id: number | null;
+  title: string;
+  description: string | null;
+  status: TaskDto['status'];
+  start_date: string;
+  end_date: string;
+  dependencies: number[];
+  overrides: Record<string, any> | null;
+  order_index: number;
+}
+
+const toScenario = (dto: ScenarioDto) => ({
+  id: dto.id,
+  projectId: dto.project_id,
+  name: dto.name,
+  description: dto.description ?? undefined,
+  createdAt: dto.created_at,
+});
+
+const toScenarioTask = (dto: ScenarioTaskDto) => ({
+  id: dto.id,
+  scenarioId: dto.scenario_id,
+  taskId: dto.task_id ?? undefined,
+  title: dto.title,
+  description: dto.description ?? undefined,
+  status: dto.status,
+  startDate: dto.start_date,
+  endDate: dto.end_date,
+  dependencies: dto.dependencies,
+  overrides: dto.overrides ?? undefined,
+  orderIndex: dto.order_index,
+});
+
+export const createScenario = async (payload: { projectId: number; name: string; description?: string }) => {
+  const response = await fetch(`${API_BASE}/scenarios`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ project_id: payload.projectId, name: payload.name, description: payload.description }),
+  });
+  const data = await handleResponse<ScenarioDto>(response);
+  return toScenario(data);
+};
+
+export const fetchScenarios = async (projectId?: number) => {
+  const url = projectId ? `${API_BASE}/scenarios?project_id=${projectId}` : `${API_BASE}/scenarios`;
+  const response = await fetch(url);
+  const data = await handleResponse<ScenarioDto[]>(response);
+  return data.map(toScenario);
+};
+
+export const fetchScenarioTasks = async (scenarioId: number) => {
+  const response = await fetch(`${API_BASE}/scenarios/${scenarioId}/tasks`);
+  const data = await handleResponse<ScenarioTaskDto[]>(response);
+  return data.map(toScenarioTask);
+};
+
+export const createScenarioTask = async (
+  scenarioId: number,
+  payload: {
+    taskId?: number | null;
+    title: string;
+    description?: string | null;
+    status: TaskStatus;
+    startDate: string;
+    endDate: string;
+    orderIndex: number;
+    dependencies?: number[];
+    overrides?: Record<string, any> | null;
+  }
+) => {
+  const response = await fetch(`${API_BASE}/scenarios/${scenarioId}/tasks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      task_id: payload.taskId,
+      title: payload.title,
+      description: payload.description,
+      status: payload.status,
+      start_date: payload.startDate,
+      end_date: payload.endDate,
+      order_index: payload.orderIndex,
+      dependencies: payload.dependencies ?? [],
+      overrides: payload.overrides ?? null,
+    }),
+  });
+  const data = await handleResponse<ScenarioTaskDto>(response);
+  return toScenarioTask(data);
+};
+
+export const updateScenarioTask = async (
+  taskId: number,
+  payload: Partial<{
+    title: string;
+    description?: string | null;
+    status: TaskStatus;
+    startDate: string;
+    endDate: string;
+    orderIndex: number;
+    dependencies: number[] | null;
+    overrides: Record<string, any> | null;
+    taskId: number | null;
+  }>
+) => {
+  const response = await fetch(`${API_BASE}/scenarios/tasks/${taskId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: payload.title,
+      description: payload.description,
+      status: payload.status,
+      start_date: payload.startDate,
+      end_date: payload.endDate,
+      order_index: payload.orderIndex,
+      dependencies: payload.dependencies ?? undefined,
+      overrides: payload.overrides ?? undefined,
+      task_id: payload.taskId ?? undefined,
+    }),
+  });
+  const data = await handleResponse<ScenarioTaskDto>(response);
+  return toScenarioTask(data);
+};
+
+export const getScenarioTask = async (taskId: number) => {
+  const response = await fetch(`${API_BASE}/scenarios/tasks/${taskId}`);
+  const data = await handleResponse<ScenarioTaskDto>(response);
+  return toScenarioTask(data);
+};
+
+export const deleteScenarioTask = async (taskId: number) => {
+  const response = await fetch(`${API_BASE}/scenarios/tasks/${taskId}`, { method: "DELETE" });
+  await handleVoidResponse(response);
+};
+
+export const deleteScenario = async (scenarioId: number) => {
+  const response = await fetch(`${API_BASE}/scenarios/${scenarioId}`, {
+    method: "DELETE",
+  });
+  await handleVoidResponse(response);
+};

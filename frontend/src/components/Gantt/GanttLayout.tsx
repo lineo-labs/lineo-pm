@@ -15,14 +15,20 @@ import {
   startOfWeek,
   endOfMonth,
   addDays,
+  diffInDaysSigned,
+  businessDaysBetweenInclusive,
 } from "../../lib/dateRange";
 import { getAutoScale, getRangeScale } from "../../lib/dateScale";
 import { GanttGrid } from "./GanttGrid";
 import { GanttHeader } from "./GanttHeader";
 import { GanttMilestones } from "./GanttMilestones";
 import { GanttRow } from "./GanttRow";
+import { GanttBar } from "./GanttBar";
 import { GanttTaskList } from "./GanttTaskList";
+import { TaskEditDialog } from "../TaskEditDialog";
 import { GanttRelations } from "./GanttRelations";
+import { computeScenarioDeltas } from "./ganttUtils";
+import { createScenario, createScenarioTask, updateScenarioTask, fetchScenarios, fetchScenarioTasks, deleteScenario } from "../../lib/api";
 
 interface GanttLayoutProps {
   tasks: Task[];
@@ -60,12 +66,19 @@ export const GanttLayout = ({
   const dragStartIndexRef = useRef<number>(0);
   const dropIndexRef = useRef<number | null>(null);
 
-  const clampIndex = (value: number) => {
-    if (visibleTasks.length === 0) {
-      return 0;
-    }
-    return Math.max(0, Math.min(visibleTasks.length - 1, value));
-  };
+  // Scenario mode state: temporary local copy of tasks to edit visually
+  const [scenarioMode, setScenarioMode] = useState(false);
+  const [scenarioTasks, setScenarioTasks] = useState<Task[] | null>(null);
+  const [editingScenarioTask, setEditingScenarioTask] = useState<Task | null>(null);
+  const [savingScenario, setSavingScenario] = useState(false);
+  const [showLoadMenu, setShowLoadMenu] = useState(false);
+  const [availableScenarios, setAvailableScenarios] = useState<{ id: number; name: string }[] | null>(null);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
+  const [showSaveName, setShowSaveName] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const tempIdRef = useRef<number>(-1);
+
+  
 
   useEffect(() => {
     const element = timelineRef.current;
@@ -86,25 +99,39 @@ export const GanttLayout = ({
 
   const { start, end } = useMemo(() => {
     const dates: Date[] = [];
-    tasks.forEach((task) => {
-      dates.push(parseISODate(task.startDate));
-      dates.push(parseISODate(task.endDate));
-    });
-    milestones.forEach((milestone) => {
-      dates.push(parseISODate(milestone.targetDate));
-    });
+
+    const pushIfValid = (d: Date | null | undefined) => {
+      if (d instanceof Date && !isNaN(d.getTime())) dates.push(d);
+    };
+
+    if (scenarioMode && scenarioTasks) {
+      for (const t of scenarioTasks) {
+        pushIfValid(parseISODate(t.startDate));
+        pushIfValid(parseISODate(t.endDate));
+      }
+    } else {
+      for (const t of tasks ?? []) {
+        pushIfValid(parseISODate(t.startDate));
+        pushIfValid(parseISODate(t.endDate));
+      }
+    }
+
+    for (const m of milestones ?? []) {
+      pushIfValid(parseISODate(m.targetDate || m.dueDate));
+    }
 
     if (dates.length === 0) {
       const today = new Date();
       const s = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
       return { start: s, end: addDays(s, 14) };
     }
+      
 
     const rawStart = new Date(Math.min(...dates.map((date) => date.getTime())));
     const rawEnd = new Date(Math.max(...dates.map((date) => date.getTime())));
     // always pad two days before start and two days after end
     return { start: addDays(rawStart, -2), end: addDays(rawEnd, 2) };
-  }, [milestones, tasks]);
+  }, [milestones, tasks, scenarioMode, scenarioTasks]);
 
   const fallbackScale = getRangeScale(start, end);
   const autoScale = useMemo(() => {
@@ -195,14 +222,130 @@ export const GanttLayout = ({
 
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
 
+  const scenarioTaskMap = useMemo(() => {
+    if (!scenarioTasks) return new Map<number, Task>();
+    return new Map(scenarioTasks.map((t) => [t.id, t]));
+  }, [scenarioTasks]);
+
+  const isScenarioTaskChanged = (scenarioTask: Task, baseTask?: Task): boolean => {
+    if (!baseTask) return true;
+
+    const sStart = parseISODate(scenarioTask.startDate)?.getTime();
+    const bStart = parseISODate(baseTask.startDate)?.getTime();
+    const sEnd = parseISODate(scenarioTask.endDate)?.getTime();
+    const bEnd = parseISODate(baseTask.endDate)?.getTime();
+
+    return sStart !== bStart || sEnd !== bEnd;
+  };
+
+  
+
   const visibleTasks = useMemo(() => {
     if (!hideDone) return tasks;
     return tasks.filter((t) => !(t.status && t.status.toLowerCase() === "done"));
   }, [tasks, hideDone]);
 
+  // left column list: when in scenario mode, merge baseline tasks with scenario edits
+  const leftColumnTasks = useMemo(() => {
+    if (!scenarioMode || !scenarioTasks) return visibleTasks;
+    const map = new Map<number, Task>();
+    for (const t of tasks) map.set(t.id, t);
+    // overlay scenario tasks (replace existing or add new scenario-only tasks)
+    for (const st of scenarioTasks) map.set(st.id, st);
+    return Array.from(map.values()).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  }, [scenarioMode, scenarioTasks, tasks, visibleTasks]);
+
+  // When in scenario mode, display scenarioTasks (which may include scenario-only tasks)
+  const displayedTasks = useMemo(() => {
+    if (scenarioMode && scenarioTasks) return scenarioTasks;
+    return visibleTasks;
+  }, [scenarioMode, scenarioTasks, visibleTasks]);
+
+  const clampIndex = (value: number) => {
+    if (visibleTasks.length === 0) {
+      return 0;
+    }
+    return Math.max(0, Math.min(visibleTasks.length - 1, value));
+  };
+
+  const scenarioDeltas = useMemo(() => {
+    if (!scenarioMode) return null;
+    return computeScenarioDeltas(visibleTasks, scenarioTasks);
+  }, [scenarioMode, scenarioTasks, visibleTasks]);
+
   // Relations are always visible now; removed toggle state
 
-  const positions = useMemo(() => visibleTasks.map((t) => ({ id: t.id, ...getTaskPosition(t) })), [visibleTasks, columnWidth, scale, rangeStart]);
+  const positions = useMemo(() => displayedTasks.map((t) => ({ id: t.id, ...getTaskPosition(t) })), [displayedTasks, columnWidth, scale, rangeStart]);
+
+  // Local handlers that modify only the temporary scenarioTasks state
+  const localOnAdjustTaskDates = (taskId: number, mode: "start" | "end", deltaDays: number) => {
+    setScenarioTasks((prev) => {
+      if (!prev) return prev;
+      return prev.map((t) => {
+        if (t.id !== taskId) return t;
+        const s = parseISODate(t.startDate);
+        const e = parseISODate(t.endDate);
+        if (mode === "start") {
+          const ns = addDays(s, deltaDays);
+          return { ...t, startDate: ns.toISOString().slice(0, 10) };
+        }
+        const ne = addDays(e, deltaDays);
+        return { ...t, endDate: ne.toISOString().slice(0, 10) };
+      });
+    });
+  };
+
+  const localOnMoveTaskDates = (taskId: number, deltaDays: number) => {
+    setScenarioTasks((prev) => {
+      if (!prev) return prev;
+      return prev.map((t) => {
+        if (t.id !== taskId) return t;
+        const s = parseISODate(t.startDate);
+        const e = parseISODate(t.endDate);
+        const ns = addDays(s, deltaDays);
+        const ne = addDays(e, deltaDays);
+        return { ...t, startDate: ns.toISOString().slice(0, 10), endDate: ne.toISOString().slice(0, 10) };
+      });
+    });
+  };
+
+  const createScenarioTaskLocal = () => {
+    const localId = tempIdRef.current--;
+    const projectId = tasks[0]?.projectId ?? 0;
+    const today = new Date();
+    const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    const startDate = start.toISOString().slice(0, 10);
+    const endDate = addDays(start, 2).toISOString().slice(0, 10);
+
+    const newTask: Task = {
+      id: localId,
+      projectId,
+      title: "New task",
+      description: undefined,
+      status: "todo",
+      startDate,
+      endDate,
+      dependencies: [],
+      orderIndex: 0,
+      overrides: undefined,
+    } as Task;
+
+    setScenarioTasks((prev) => {
+      const list = prev ? [...prev] : [];
+      const maxOrder = list.reduce((m, t) => Math.max(m, t.orderIndex ?? 0), 0);
+      const orderIndex = maxOrder + 1;
+      newTask.orderIndex = orderIndex;
+      return [...list, newTask];
+    });
+
+    // open editor for the newly created scenario task
+    setEditingScenarioTask({ ...newTask });
+  };
+
+  // typed no-op handlers for base vs scenario wiring
+  const noopAdjust = (taskId: number, mode: "start" | "end", deltaDays: number) => {};
+  const noopMove = (taskId: number, deltaDays: number) => {};
+  const noopRowDrag = (taskId: number, _event: any) => {};
 
   const handleRowDragStart = (taskId: number, event: PointerEvent<Element>) => {
     const index = tasks.findIndex((task) => task.id === taskId);
@@ -299,7 +442,7 @@ export const GanttLayout = ({
     };
   }, [draggingTaskId, onReorderTasks, tasks]);
 
-  const draggingIndex = draggingTaskId !== null ? visibleTasks.findIndex((t) => t.id === draggingTaskId) : null;
+  const draggingIndex = draggingTaskId !== null ? displayedTasks.findIndex((t) => t.id === draggingTaskId) : null;
 
   return (
     <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
@@ -310,8 +453,8 @@ export const GanttLayout = ({
             Scale: {scale === "month" ? "Months" : scale === "week" ? "Weeks" : "Days"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-xs text-slate-500">{visibleTasks.length} tasks</div>
+        <div className="relative flex items-center gap-3">
+          <div className="text-xs text-slate-500">{displayedTasks.length} tasks</div>
           <button
             type="button"
             onClick={() => setHideDone((s) => !s)}
@@ -328,7 +471,221 @@ export const GanttLayout = ({
           >
             {showRelations ? 'Hide relations' : 'Show relations'}
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!scenarioMode) {
+                // enter scenario: clone tasks into temporary state
+                setScenarioTasks(tasks.map((t) => ({ ...t })));
+                setScenarioMode(true);
+              } else {
+                // exit scenario and discard
+                setScenarioMode(false);
+                setScenarioTasks(null);
+              }
+            }}
+            className={`text-xs px-2 py-1 rounded-md border ${scenarioMode ? 'bg-red-600 text-white border-red-700' : 'bg-emerald-500 text-white border-emerald-600'}`}
+          >
+            {scenarioMode ? 'Exit scenario' : 'New scenario'}
+          </button>
+          {scenarioMode && (
+            <button
+              type="button"
+              onClick={() => createScenarioTaskLocal()}
+              className="text-xs px-2 py-1 rounded-md border bg-sky-500 text-white border-sky-600"
+            >
+              New task
+            </button>
+          )}
+          
+          <div>
+            <button
+              type="button"
+              onClick={async () => {
+                // always fetch latest scenarios when opening menu
+                const projectId = tasks[0]?.projectId ?? undefined;
+                try {
+                  setShowLoadMenu((s) => !s);
+                  const list = await fetchScenarios(projectId);
+                  const mapped = list.map((s) => ({ id: s.id, name: s.name }));
+                  setAvailableScenarios(mapped);
+                  if (mapped.length > 0) setSelectedScenarioId(mapped[0].id);
+                } catch (err) {
+                  console.error(err);
+                }
+              }}
+              className="text-xs px-2 py-1 rounded-md border bg-indigo-600 text-white border-indigo-700"
+            >
+              Load scenario
+            </button>
+            {showLoadMenu && (
+              <div className="absolute right-0 mt-2 p-3 rounded-md bg-slate-800 border border-slate-700 z-40 origin-top-right">
+                <div className="mb-2 text-sm text-slate-300">Choose scenario</div>
+                <div className="mb-2 block w-64 text-sm p-1 bg-slate-900 border border-slate-700 max-h-60 overflow-auto">
+                  {(availableScenarios ?? []).map((s) => (
+                    <div
+                      key={s.id}
+                      className={`p-2 cursor-pointer text-slate-200 hover:bg-slate-700 flex items-center justify-between ${selectedScenarioId === s.id ? 'bg-slate-700' : ''}`}
+                      onClick={async () => {
+                        try {
+                          const tasksForScenario = await fetchScenarioTasks(s.id);
+                          // map tasks (include scenario-only tasks as well)
+                          const mapped = tasksForScenario.map((st) => ({
+                            id: st.taskId ?? (tempIdRef.current--),
+                            projectId: tasks[0]?.projectId ?? 0,
+                            title: st.title,
+                            description: st.description ?? undefined,
+                            status: st.status as any,
+                            startDate: st.startDate,
+                            endDate: st.endDate,
+                            dependencies: st.dependencies ?? [],
+                            orderIndex: st.orderIndex,
+                            overrides: st.overrides ?? undefined,
+                          }));
+                          setScenarioTasks(mapped as any);
+                          setScenarioMode(true);
+                          setSelectedScenarioId(s.id);
+                          setShowLoadMenu(false);
+                        } catch (err) {
+                          console.error(err);
+                          alert(`Failed to load scenario: ${String(err)}`);
+                        }
+                      }}
+                    >
+                      <div className="flex-1">{s.name}</div>
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const confirmed = confirm(`Delete scenario "${s.name}"?`);
+                          if (!confirmed) return;
+                          try {
+                            const projectId = tasks[0]?.projectId ?? undefined;
+                            await deleteScenario(s.id);
+                            const list = await fetchScenarios(projectId);
+                            const mappedList = list.map((ss) => ({ id: ss.id, name: ss.name }));
+                            setAvailableScenarios(mappedList);
+                            if (mappedList.length > 0) setSelectedScenarioId(mappedList[0].id);
+                            else setSelectedScenarioId(null);
+                            if (scenarioMode && selectedScenarioId === s.id) {
+                              setScenarioMode(false);
+                              setScenarioTasks(null);
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            alert(`Failed to delete scenario: ${String(err)}`);
+                          }
+                        }}
+                        className="ml-2 text-xs px-2 py-1 rounded-md border bg-transparent text-red-400 border-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowLoadMenu(false)}
+                    className="text-xs px-2 py-1 rounded-md border bg-transparent text-slate-200 border-slate-700"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Save name input */}
+          {scenarioMode && (
+            <div className="ml-2">
+              {!showSaveName ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSaveName(true);
+                    setSaveName(`Scenario ${new Date().toISOString().slice(0, 19)}`);
+                  }}
+                  className="text-xs px-2 py-1 rounded-md border bg-sky-500 text-white border-sky-600"
+                >
+                  Save scenario
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={saveName}
+                    onChange={(e) => setSaveName(e.target.value)}
+                    className="text-sm p-1 rounded-md bg-slate-900 border border-slate-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!saveName || !scenarioTasks) return;
+                      try {
+                        setSavingScenario(true);
+                        const projectId = tasks[0]?.projectId ?? 0;
+                        const scenario = await createScenario({ projectId, name: saveName, description: null });
+
+                        const mapping = new Map<number, number>(); // local id -> created scenario_task id
+                        // create scenario tasks in order
+                        for (const [idx, st] of scenarioTasks.entries()) {
+                          const localId = st.id;
+                          const payload = {
+                            taskId: localId > 0 ? localId : null,
+                            title: st.title,
+                            description: st.description ?? null,
+                            status: st.status,
+                            startDate: st.startDate,
+                            endDate: st.endDate,
+                            orderIndex: st.orderIndex ?? idx + 1,
+                            dependencies: [],
+                            overrides: (st as any).overrides ?? null,
+                          } as const;
+
+                          const created = await createScenarioTask(scenario.id, payload as any);
+                          mapping.set(localId, created.id);
+                        }
+
+                        // update dependencies
+                        for (const st of scenarioTasks) {
+                          const localId = st.id;
+                          const newId = mapping.get(localId);
+                          if (!newId) continue;
+                          const deps = (st.dependencies || [])
+                            .map((d) => mapping.get(d))
+                            .filter(Boolean) as number[];
+                          if (deps.length > 0) {
+                            await updateScenarioTask(newId, { dependencies: deps });
+                          }
+                        }
+
+                        setScenarioMode(false);
+                        setScenarioTasks(null);
+                        setShowSaveName(false);
+                      } catch (err) {
+                        console.error(err);
+                        alert(`Failed to save scenario: ${String(err)}`);
+                      } finally {
+                        setSavingScenario(false);
+                      }
+                    }}
+                    className="text-xs px-2 py-1 rounded-md border bg-emerald-500 text-white border-emerald-600"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSaveName(false)}
+                    className="text-xs px-2 py-1 rounded-md border bg-transparent text-slate-200 border-slate-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
+        
       </div>
 
       <div ref={layoutRef} className="relative grid grid-cols-[260px_1fr] gap-0">
@@ -359,10 +716,21 @@ export const GanttLayout = ({
           />
         )}
         <GanttTaskList
-          tasks={tasks}
+          tasks={leftColumnTasks}
           hideDone={hideDone}
           rowHeight={ROW_HEIGHT}
-          onEditTask={onEditTask}
+          onEditTask={(task) => {
+            // if in scenario mode and this task exists in scenarioTasks, open local scenario editor
+            if (scenarioMode && scenarioTasks) {
+              const st = scenarioTasks.find((t) => t.id === task.id);
+              if (st) {
+                setEditingScenarioTask({ ...st });
+                return;
+              }
+            }
+            // otherwise fall back to parent handler
+            onEditTask(task);
+          }}
           headerHeight={HEADER_HEIGHT}
         />
         <div
@@ -400,26 +768,127 @@ export const GanttLayout = ({
                   style={{ top: dropIndex * ROW_HEIGHT + ROW_HEIGHT - 2 }}
                 />
               )}
-              {visibleTasks.map((task, index) => (
-                <GanttRow
-                  key={task.id}
-                  task={task}
-                  rowIndex={index}
-                  rowHeight={ROW_HEIGHT}
-                  position={getTaskPosition(task)}
-                  columnWidth={columnWidth}
-                  scale={scale}
-                  taskMap={taskMap}
-                  onAdjustTaskDates={onAdjustTaskDates}
-                  onMoveTaskDates={onMoveTaskDates}
-                  onEditTask={onEditTask}
-                  onRowDragStart={handleRowDragStart}
-                  isRowDragging={draggingTaskId === task.id}
-                  hideDone={hideDone}
-                />
-              ))}
+              {displayedTasks.map((task, index) => {
+                // default: when NOT in scenario mode, render the regular interactive row
+                if (!scenarioMode) {
+                  return (
+                    <GanttRow
+                      key={task.id}
+                      variant="scenario"
+                      task={task}
+                      rowIndex={index}
+                      rowHeight={ROW_HEIGHT}
+                      position={getTaskPosition(task)}
+                      columnWidth={columnWidth}
+                      scale={scale}
+                      taskMap={taskMap}
+                      onAdjustTaskDates={onAdjustTaskDates}
+                      onMoveTaskDates={onMoveTaskDates}
+                      onEditTask={onEditTask}
+                      onRowDragStart={handleRowDragStart}
+                      isRowDragging={draggingTaskId === task.id}
+                      hideDone={hideDone}
+                    />
+                  );
+                }
+
+                // scenarioMode: render scenario task directly. If it maps to a baseline
+                // task, we render a faint base bar underneath.
+                const scenarioTask = task; // already from scenarioTasks when in scenarioMode
+                const baseTask = tasks.find((t) => t.id === scenarioTask.id);
+                const basePos = baseTask ? getTaskPosition(baseTask) : { offset: 0, width: 0 };
+                const scenarioPos = getTaskPosition(scenarioTask);
+
+                return (
+                  <div key={task.id} style={{ position: "relative", height: ROW_HEIGHT }}>
+                    <GanttRow
+                      key={`scenario-${task.id}`}
+                      variant="scenario"
+                      task={scenarioTask}
+                      rowIndex={index}
+                      rowHeight={ROW_HEIGHT}
+                      position={scenarioPos}
+                      columnWidth={columnWidth}
+                      scale={scale}
+                      taskMap={scenarioTaskMap}
+                      onAdjustTaskDates={localOnAdjustTaskDates}
+                      onMoveTaskDates={localOnMoveTaskDates}
+                      onEditTask={(t) => {
+                        setEditingScenarioTask({ ...scenarioTask });
+                      }}
+                      onRowDragStart={noopRowDrag}
+                      isRowDragging={false}
+                      hideDone={hideDone}
+                    />
+
+                    {baseTask && isScenarioTaskChanged(scenarioTask, baseTask) && (
+                      <div
+                        aria-hidden
+                        style={{
+                          position: "absolute",
+                          top: ROW_HEIGHT - 12,
+                          left: basePos.offset,
+                          width: basePos.width,
+                          pointerEvents: "none",
+                          zIndex: 25,
+                        }}
+                      >
+                        <GanttBar
+                          title={baseTask.title}
+                          offset={0}
+                          width={basePos.width}
+                          isDragging={false}
+                          isRowDragging={false}
+                          onBarPointerDown={() => {}}
+                          onPointerMove={() => {}}
+                          onPointerUp={() => {}}
+                          onPointerCancel={() => {}}
+                          onResizeStartPointerDown={() => {}}
+                          onResizeEndPointerDown={() => {}}
+                          variant="base"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
+
+          {/* Scenario deltas panel rendered under the Gantt timeline when scenario active */}
+          {scenarioMode && scenarioDeltas && (
+            <div className="mt-3 px-4">
+              <div className="rounded-md border border-slate-900 bg-slate-900/30 p-3 text-sm text-slate-200">
+                <div className="flex gap-6 items-center">
+                  <div>
+                    <div className="text-xs text-slate-400">Delta work days</div>
+                    <div className="font-medium">{scenarioDeltas.totalDeltaDays >= 0 ? '+' : ''}{scenarioDeltas.totalDeltaDays}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">Start delta (scenario vs baseline)</div>
+                    <div className="font-medium">
+                      {scenarioDeltas.deltaStart < 0
+                        ? `${Math.abs(scenarioDeltas.deltaStart)} days earlier`
+                        : scenarioDeltas.deltaStart > 0
+                        ? `${scenarioDeltas.deltaStart} days later`
+                        : 'no change'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">End delta (scenario vs baseline)</div>
+                    <div className="font-medium">
+                      {scenarioDeltas.deltaEnd > 0
+                        ? `${scenarioDeltas.deltaEnd} days later`
+                        : scenarioDeltas.deltaEnd < 0
+                        ? `${Math.abs(scenarioDeltas.deltaEnd)} days earlier`
+                        : 'no change'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {milestones.length > 0 && (
             <GanttMilestones
               milestones={milestones}
@@ -433,6 +902,46 @@ export const GanttLayout = ({
           )}
         </div>
       </div>
+      {/* Scenario task editor (local-only) */}
+      {scenarioMode && (
+        <TaskEditDialog
+          task={editingScenarioTask}
+          open={!!editingScenarioTask}
+          onClose={() => setEditingScenarioTask(null)}
+          onCreateUpdate={async (_payload) => {
+            // no-op for local scenario updates for now
+            return;
+          }}
+          onSave={(taskId, payload) => {
+            setScenarioTasks((prev) => {
+              if (!prev) return prev;
+              return prev.map((t) => {
+                if (t.id !== taskId) return t;
+                return {
+                  ...t,
+                  title: payload.title,
+                  description: payload.description ?? undefined,
+                  status: payload.status,
+                  startDate: payload.startDate,
+                  endDate: payload.endDate,
+                  dependencies: payload.dependencies ?? [],
+                } as Task;
+              });
+            });
+            setEditingScenarioTask(null);
+          }}
+          onDelete={async (taskId) => {
+            setScenarioTasks((prev) => (prev ? prev.filter((t) => t.id !== taskId) : prev));
+            setEditingScenarioTask(null);
+          }}
+          onDependencyChange={(taskId, dependencies) => {
+            setScenarioTasks((prev) => {
+              if (!prev) return prev;
+              return prev.map((t) => (t.id === taskId ? { ...t, dependencies } : t));
+            });
+          }}
+        />
+      )}
     </section>
   );
 };

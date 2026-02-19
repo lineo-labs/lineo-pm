@@ -14,7 +14,7 @@ class Setup(BaseSettings):
         DATABASE_URL (str): Database connection URL.
     """
 
-    DATABASE_URL: str = "postgresql+psycopg://lines:lines@localhost:5432/lines"
+    DATABASE_URL: str = "postgresql+psycopg://lineo:lineo@localhost:5432/lineo"
 
 
 setup = Setup()

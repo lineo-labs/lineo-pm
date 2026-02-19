@@ -29,7 +29,7 @@ def ensure_default_project(db: Session) -> Project:
 
     today = date.today()
     project = Project(
-        name="lines-pm",
+        name="lineo-pm",
         description="MVP build for the initial release",
         start_date=today - timedelta(days=6),
         end_date=today + timedelta(days=21),
