@@ -224,6 +224,34 @@ export const GanttLayout = ({
     return new Map(scenarioTasks.map((t) => [t.id, t]));
   }, [scenarioTasks]);
 
+  const isScenarioTaskChanged = (scenarioTask: Task, baseTask?: Task): boolean => {
+    if (!baseTask) return true;
+
+    if (scenarioTask.title !== baseTask.title) return true;
+    if ((scenarioTask.description ?? undefined) !== (baseTask.description ?? undefined)) return true;
+    if ((scenarioTask.status ?? undefined) !== (baseTask.status ?? undefined)) return true;
+
+    const sStart = parseISODate(scenarioTask.startDate)?.getTime();
+    const bStart = parseISODate(baseTask.startDate)?.getTime();
+    if (sStart !== bStart) return true;
+
+    const sEnd = parseISODate(scenarioTask.endDate)?.getTime();
+    const bEnd = parseISODate(baseTask.endDate)?.getTime();
+    if (sEnd !== bEnd) return true;
+
+    if ((scenarioTask.orderIndex ?? undefined) !== (baseTask.orderIndex ?? undefined)) return true;
+
+    const sDeps = JSON.stringify(scenarioTask.dependencies ?? []);
+    const bDeps = JSON.stringify(baseTask.dependencies ?? []);
+    if (sDeps !== bDeps) return true;
+
+    const sOver = JSON.stringify((scenarioTask as any).overrides ?? null);
+    const bOver = JSON.stringify((baseTask as any).overrides ?? null);
+    if (sOver !== bOver) return true;
+
+    return false;
+  };
+
   
 
   const visibleTasks = useMemo(() => {
@@ -742,7 +770,7 @@ export const GanttLayout = ({
                       hideDone={hideDone}
                     />
 
-                    {baseTask && (
+                    {baseTask && isScenarioTaskChanged(scenarioTask, baseTask) && (
                       <div
                         aria-hidden
                         style={{
