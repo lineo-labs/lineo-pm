@@ -1,11 +1,80 @@
 """Monte Carlo probabilistic schedule simulations (NumPy-optimized).
 
-- Samples per-task durations with risk multipliers + uniform noise (±20%)
-- Builds each simulated schedule respecting dependencies (FS semantics on merged deps)
-- Aggregates slip probability, mean delay when slip, percentiles, per-task slip prob
-- Adds delay histogram
+Overview
+--------
+This module runs Monte Carlo simulations to estimate the probability and
+magnitude of project schedule slip relative to the baseline. Simulations are
+vectorized with NumPy: durations for all runs are sampled into a matrix and the
+code iterates only over tasks (not over runs) for performance.
 
-This version vectorizes across runs using NumPy, looping only across tasks.
+Step-by-step explanation
+------------------------
+1. Load tasks
+     - Query `Task` objects for the project ordered by `order_index`. Build
+         `id_to_idx` / `idx_to_id` maps to index into NumPy arrays.
+
+2. Load relations and merge dependencies
+     - Query `Relation` objects and build `deps_by_id` that merges the
+         `Task.dependencies` list with relations, without mutating ORM objects.
+
+3. Topological order
+     - Construct a graph from FS relations (treated as predecessor->successor)
+         and compute a topological ordering. If a cycle is detected, fall back to
+         the stored `order_index` to preserve deterministic behavior.
+
+4. Baseline and reference durations
+     - Convert `start_date` / `end_date` to ordinal integers (days) and compute
+         base durations per task and the baseline project end date.
+
+5. RNG and runs configuration
+     - Clamp `runs` to a safe range (1..100000) and create a NumPy RNG for fast
+         sampling.
+
+6. Risk multipliers and overrides
+     - Map risk labels (`low`/`medium`/`high`) to multipliers (0.5/1.0/1.5) and
+         apply any `risk_overrides` passed in the request.
+
+7. Sample task durations
+     - For each task and run sample noise ~ U(0.8, 1.2). Compute
+         `dur = round(base_duration * multiplier * noise)` and clamp to >= 1 day.
+         Result: a `(n_tasks, runs)` integer matrix of durations.
+
+8. Predecessor indices
+     - For fast vectorized access build, for each task, an array of predecessor
+         indices into the internal 0..n_tasks-1 indexing.
+
+9. Build schedules (vectorized across runs)
+     - For each task in topological order:
+         - `earliest` = baseline_start (scalar)
+         - if predecessors exist, compute per-run max of their `end` values and
+             take `earliest = max(earliest, pred_end_max)` (vectorized)
+         - `start = earliest`; `end = start + dur(task, run)`
+     - This produces `starts` and `ends` arrays with shape `(n_tasks, runs)`.
+
+10. Project delays and statistics
+        - `project_end` = max over tasks of `ends` (per run).
+        - `delays` = max(0, project_end - baseline_end_project) (per run).
+        - `slip_probability` = fraction of runs with `delay > 0`.
+        - `mean_delay_days_when_slip` = mean of delays where `delay > 0` (0 if none).
+        - Percentiles (p50/p75/p90/p99) computed with
+            `np.quantile(method="nearest")` to avoid interpolation.
+        - `per_task_slip_probability`: for each task, fraction of runs where
+            `end_task > baseline_end_task`.
+        - `delay_histogram`: probability histogram mapping integer days -> probability.
+
+Output
+------
+The endpoint returns a JSON-serializable dict with keys: `runs`, `baseline_end`,
+`slip_probability`, `mean_delay_days_when_slip`, `percentiles_days`,
+`per_task_slip_probability`, and `delay_histogram`.
+
+Implementation notes
+--------------------
+- The implementation focuses on memory and speed: NumPy `int32`/`float32`
+    types and vectorization across runs while looping only over tasks.
+- ORM objects are not mutated while building dependency maps.
+- Results are reproducible within the probabilistic nature of RNG-driven sampling
+    (NumPy RNG is used).
 """
 
 from __future__ import annotations
