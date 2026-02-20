@@ -8,6 +8,7 @@ from src.routers.tasks import router as tasks_router
 from src.routers.updates import router as updates_router
 from src.routers.relations import router as relations_router
 from src.routers.scenarios import router as scenarios_router
+from src.routers.simulations import router as simulations_router
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(milestones_router)
@@ -16,5 +17,6 @@ api_router.include_router(tasks_router)
 api_router.include_router(updates_router)
 api_router.include_router(relations_router)
 api_router.include_router(scenarios_router)
+api_router.include_router(simulations_router)
 
 __all__ = ["api_router"]

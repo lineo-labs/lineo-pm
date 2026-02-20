@@ -29,6 +29,7 @@ import { TaskEditDialog } from "../TaskEditDialog";
 import { GanttRelations } from "./GanttRelations";
 import { computeScenarioDeltas } from "./ganttUtils";
 import { createScenario, createScenarioTask, updateScenarioTask, fetchScenarios, fetchScenarioTasks, deleteScenario } from "../../lib/api";
+import MonteCarloPanel from "../MonteCarloPanel";
 
 interface GanttLayoutProps {
   tasks: Task[];
@@ -697,7 +698,7 @@ export const GanttLayout = ({
         
       </div>
 
-      <div ref={layoutRef} className="relative grid grid-cols-[260px_1fr] gap-0">
+      <div ref={layoutRef} className="relative grid grid-cols-[300px_1fr] gap-0">
         {/* full-row overlays span both columns to color the entire row during reordering */}
         {draggingIndex !== null && draggingIndex >= 0 && (
           <div
@@ -902,6 +903,8 @@ export const GanttLayout = ({
             </div>
           )}
 
+          {/* Monte Carlo simulation panel removed from inside timeline; rendered separately below */}
+
           {milestones.length > 0 && (
             <GanttMilestones
               milestones={milestones}
@@ -915,6 +918,16 @@ export const GanttLayout = ({
           )}
         </div>
       </div>
+
+      {/* Monte Carlo panel rendered in its own container, aligned with the left task list */}
+      <div className="mt-3 grid grid-cols-[300px_1fr] gap-0">
+        <div className="px-4 col-span-2">
+          <div className="max-w-full">
+            <MonteCarloPanel projectId={tasks[0]?.projectId ?? 0} tasks={visibleTasks} />
+          </div>
+        </div>
+      </div>
+
       {/* Scenario task editor (local-only) */}
       {scenarioMode && (
         <TaskEditDialog

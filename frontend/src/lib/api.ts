@@ -350,6 +350,41 @@ export const fetchUpdates = async (projectId: number) => {
   return data.map(toUpdate);
 };
 
+// --- Monte Carlo simulation ---
+interface MonteCarloRequestDto {
+  project_id: number;
+  runs?: number;
+  risk_overrides?: Record<number, string> | null;
+}
+
+interface MonteCarloResultDto {
+  runs: number;
+  baseline_end: string;
+  slip_probability: number;
+  mean_delay_days_when_slip: number;
+  percentiles_days: Record<string, number>;
+  per_task_slip_probability: Record<number, number>;
+}
+
+export const runMonteCarlo = async (payload: {
+  projectId: number;
+  runs?: number;
+  riskOverrides?: Record<number, string> | null;
+}) => {
+  const body: MonteCarloRequestDto = {
+    project_id: payload.projectId,
+    runs: payload.runs,
+    risk_overrides: payload.riskOverrides ?? null,
+  };
+  const response = await fetch(`${API_BASE}/simulations/montecarlo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await handleResponse<MonteCarloResultDto>(response);
+  return data;
+};
+
 export const createUpdate = async (payload: {
   projectId: number;
   text: string;

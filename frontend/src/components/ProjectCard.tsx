@@ -81,6 +81,7 @@ export const ProjectCard = ({
             Export CSV
           </button>
         )}
+        {/* Monte Carlo panel intentionally omitted here; available under the Gantt view only */}
       </div>
       {project && (
         <>
