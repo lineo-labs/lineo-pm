@@ -155,12 +155,12 @@ Backend OpenAPI docs:
 
 ## Roadmap
 
-* [ ] CSV import
-* [ ] PDF export
-* [ ] Baseline drafting and comparison
+* [x] Baseline drafting and comparison
+* [x] Monte Carlo simulation with risk analysis
+* [ ] Risk heatmaps
+* [ ] Critical path analysis
 * [ ] Cross-project Gantt view
 * [ ] User authentication & permissions
-* [ ] Shared project views (collaboration / view-only mode)
 * [ ] Optional AI Assistant (Jarvis-style) for:
 
   * Auto-suggest task durations
