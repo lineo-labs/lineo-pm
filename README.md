@@ -13,7 +13,7 @@
 
 ## What is lineo?
 
-**Lineo-PM** is not a task manager, but a modern decision-engine tool built around **dependencies propagation** and **scenario planning**.
+**Lineo-PM** is not a task manager, but a modern decision-engine tool built around **dependencies propagation**, **scenario planning** and **Monte Carlo simulation**.
 
 It helps you to answer:
 > what happens if I move this?
@@ -36,6 +36,25 @@ Hover over a task to highlight its dependency chain and immediately visualize pr
 Scenarios are persistent alternative project timelines that you can create, modify, and compare with actual baselines. They allow you to model different "what if" situations without affecting your main plan. You can save multiple scenarios, each representing a different set of assumptions or decisions, and easily switch between them to analyze their impacts. **Planning becomes a measurable decision process.**
 
 You can promote a scenario to become the new baseline, or keep it as a reference for future planning. This way, you can explore various options and make informed decisions based on how they affect your project timeline.
+
+---
+
+<div align="center">
+<h1 align="center">Monte Carlo Simulation</h1>
+
+![Monte Carlo](docs/monte-carlo-preview.png)
+</div>
+
+Monte Carlo simulations let you evaluate how uncertainty in task durations and risk levels can affect the entire project timeline. Rather than focusing on a single plan, Monte Carlo runs many randomized schedule scenarios and summarizes the overall risk and likely outcomes.
+
+High-level outputs you can use for planning:
+
+- **Project slip probability:** how often the project finishes after the baseline
+- **Typical and percentile delays:** median/percentile delay estimates for decision-making
+- **Per-task slip risk:** which tasks contribute most to overall schedule risk
+- **Delay distribution & worst-case estimate:** a distribution of possible delays and a simple worst-case date estimate
+
+Use Monte Carlo when you want a probabilistic view of schedule risk (for example, to decide whether to add contingency, re-sequence work, or target risk mitigation on high-impact tasks).
 
 ---
 
@@ -136,12 +155,12 @@ Backend OpenAPI docs:
 
 ## Roadmap
 
-* [ ] CSV import
-* [ ] PDF export
-* [ ] Baseline drafting and comparison
+* [x] Baseline drafting and comparison
+* [x] Monte Carlo simulation with risk analysis
+* [ ] Risk heatmaps
+* [ ] Critical path analysis
 * [ ] Cross-project Gantt view
 * [ ] User authentication & permissions
-* [ ] Shared project views (collaboration / view-only mode)
 * [ ] Optional AI Assistant (Jarvis-style) for:
 
   * Auto-suggest task durations

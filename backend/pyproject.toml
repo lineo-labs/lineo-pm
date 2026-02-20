@@ -15,4 +15,5 @@ dependencies = [
     "redis>=5.2.1",
     "sqlalchemy>=2.0.44",
     "uvicorn>=0.38.0",
+    "numpy>=1.26.0",
 ]
