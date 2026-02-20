@@ -7,6 +7,7 @@ import { TaskCreateForm } from "./TaskCreateForm";
 interface TasksCardProps {
   tasks: Task[];
   projectId?: number;
+  activitiesCount?: number;
   onCreateTask: (payload: {
     title: string;
     description?: string;
@@ -25,6 +26,7 @@ interface TasksCardProps {
 export const TasksCard = ({
   tasks,
   projectId,
+  activitiesCount,
   onCreateTask,
   onCreateMilestone,
   onCreateUpdate,
@@ -66,7 +68,7 @@ export const TasksCard = ({
       <details>
         <summary className="flex cursor-pointer items-center justify-between text-lg font-semibold text-slate-100">
           <span>New task</span>
-          <span className="text-xs font-normal text-slate-500">{tasks.length} total</span>
+          <span className="text-xs font-normal text-slate-500">{activitiesCount ?? tasks.length} total</span>
         </summary>
         <TaskCreateForm projectId={projectId} onSubmit={handleCreateTask} />
       </details>

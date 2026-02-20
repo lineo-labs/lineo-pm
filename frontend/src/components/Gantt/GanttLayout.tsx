@@ -38,6 +38,7 @@ interface GanttLayoutProps {
   onMoveTaskDates: (taskId: number, deltaDays: number) => void;
   onReorderTasks: (orderedIds: number[]) => void;
   onMoveMilestone: (milestoneId: number, deltaDays: number) => void;
+  onDisplayedTasksCount?: (count: number) => void;
 }
 
 const ROW_HEIGHT = 44;
@@ -54,6 +55,7 @@ export const GanttLayout = ({
   onMoveTaskDates,
   onReorderTasks,
   onMoveMilestone,
+  onDisplayedTasksCount,
 }: GanttLayoutProps) => {
   const [hideDone, setHideDone] = useState(false);
   const [showRelations, setShowRelations] = useState(false);
@@ -260,6 +262,13 @@ export const GanttLayout = ({
     if (scenarioMode && scenarioTasks) return scenarioTasks;
     return visibleTasks;
   }, [scenarioMode, scenarioTasks, visibleTasks]);
+
+  // notify parent about current displayed tasks count (includes scenario-only tasks)
+  useEffect(() => {
+    if (typeof onDisplayedTasksCount === "function") {
+      onDisplayedTasksCount(displayedTasks.length);
+    }
+  }, [displayedTasks, onDisplayedTasksCount]);
 
   const clampIndex = (value: number) => {
     if (visibleTasks.length === 0) {
@@ -863,6 +872,10 @@ export const GanttLayout = ({
                   <div>
                     <div className="text-xs text-slate-400">Delta work days</div>
                     <div className="font-medium">{scenarioDeltas.totalDeltaDays >= 0 ? '+' : ''}{scenarioDeltas.totalDeltaDays}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">Delta activities</div>
+                    <div className="font-medium">{scenarioDeltas.activityDelta >= 0 ? '+' : ''}{scenarioDeltas.activityDelta}</div>
                   </div>
                   <div>
                     <div className="text-xs text-slate-400">Start delta (scenario vs baseline)</div>

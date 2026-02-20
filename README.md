@@ -5,7 +5,7 @@
 <p>
 
 
-<h1 align="center">Open Source Decision-Driven Project Management</h1>
+<h1 align="center">Open Source Decision-Driven Planning Engine</h1>
 
 ![Demo](docs/demo-preview.gif)
 
@@ -13,19 +13,27 @@
 
 ## What is lineo?
 
-**lineo-PM** is not a task manager, but a modern open-source project management tool built around **interactive Gantt charts** and **decision-driven planning**.
+**Lineo-PM** is not a task manager, but a modern decision-engine tool built around **dependencies propagation** and **scenario planning**.
 
-It helps you to answer one question:
+It helps you to answer questions:
 > what happens if I move this?
+> what if plan B is needed?
 
 The GIF above shows the core interaction: dragging a task to a new date automatically updates all dependent tasks, allowing you to instantly see the impact of your decision.
 
-The idea is simple:
-> Move activities. Change dependencies. Instantly see the impact.
+The idea is simple: **Move activities. Change dependencies. Instantly see the impact.**
 
-lineo helps you understand **how decisions affect time**.
+Lineo helps you understand **how decisions affect time**.
 
 Hover over a task to highlight its dependency chain and immediately visualize project dynamics.
+
+---
+
+## What are scenarios?
+
+Scenarios are persistent alternative project timelines that you can create, modify, and compare with actual baselines. They allow you to model different "what if" situations without affecting your main plan. You can save multiple scenarios, each representing a different set of assumptions or decisions, and easily switch between them to analyze their impacts. **Planning becomes a measurable decision process.**
+
+You can promote a scenario to become the new baseline, or keep it as a reference for future planning. This way, you can explore various options and make informed decisions based on how they affect your project timeline.
 
 ---
 
@@ -33,7 +41,7 @@ Hover over a task to highlight its dependency chain and immediately visualize pr
 
 Most project tools focus on task tracking, gamification, or Kanban workflows.
 
-lineo focuses on **decision support**.
+Lineo focuses on **decision support**.
 
 It is **time-first**, not board-first.
 
@@ -57,7 +65,7 @@ Instead of managing tasks, you manage **project flow**.
 * Executives
 * Product Leaders
 
-Peole who need to:
+People who need to:
 
 * Replan under pressure
 * Explain delays

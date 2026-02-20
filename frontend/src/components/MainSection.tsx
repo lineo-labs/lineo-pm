@@ -78,6 +78,7 @@ export const MainSection = ({
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
   const [isProjectEditing, setIsProjectEditing] = useState(false);
+  const [displayedTasksCount, setDisplayedTasksCount] = useState<number | null>(null);
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -104,6 +105,7 @@ export const MainSection = ({
         <TasksCard
           tasks={tasks}
           projectId={project?.id}
+          activitiesCount={displayedTasksCount ?? tasks.length}
           onCreateTask={onCreateTask}
           onCreateMilestone={onCreateMilestone}
           onCreateUpdate={onCreateUpdate}
@@ -118,6 +120,7 @@ export const MainSection = ({
         onMoveTaskDates={onMoveTaskDates}
         onReorderTasks={onReorderTasks}
         onMoveMilestone={onMoveMilestone}
+        onDisplayedTasksCount={setDisplayedTasksCount}
       />
 
       <TaskEditDialog
