@@ -15,11 +15,13 @@
 
 **Lineo-PM** is not a task manager, but a modern decision-engine tool built around **dependencies propagation** and **scenario planning**.
 
-It helps you to answer questions:
+It helps you to answer:
 > what happens if I move this?
 > what if plan B is needed?
 
-The GIF above shows the core interaction: dragging a task to a new date automatically updates all dependent tasks, allowing you to instantly see the impact of your decision.
+The GIF above shows the core interaction: 
+* dragging a task to a new date automatically updates all dependent tasks, allowing you to instantly see the impact of your decision. 
+* create scenarios to model different timelines and compare them with the baseline.
 
 The idea is simple: **Move activities. Change dependencies. Instantly see the impact.**
 
