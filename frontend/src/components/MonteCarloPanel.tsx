@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { runMonteCarlo } from "../lib/api";
+import { useEffect, useState } from "react";
+import { runMonteCarlo, fetchScenarios } from "../lib/api";
 import type { Task } from "../lib/types";
 
 interface Props {
@@ -11,6 +11,27 @@ export const MonteCarloPanel = ({ projectId, tasks }: Props) => {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [runs, setRuns] = useState(1000);
+  const [scenarios, setScenarios] = useState<{ id: number; name?: string }[]>([]);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(tasks[0]?.scenarioId ?? null);
+
+  useEffect(() => {
+    let mounted = true;
+    if (projectId) {
+      fetchScenarios(projectId)
+        .then((data) => {
+          if (!mounted) return;
+          setScenarios(data);
+          if (selectedScenarioId === null && data.length > 0) setSelectedScenarioId(data[0].id);
+        })
+        .catch(() => {
+          // ignore fetch errors for scenarios; UI will still allow run if tasks supply a scenario
+        });
+    }
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   return (
     <div className="w-full">
@@ -22,15 +43,32 @@ export const MonteCarloPanel = ({ projectId, tasks }: Props) => {
           onChange={(e) => setRuns(Number(e.target.value))}
           min={1}
         />
+        <div>
+          <label className="sr-only">Scenario</label>
+          <select
+            value={selectedScenarioId ?? ""}
+            onChange={(e) => setSelectedScenarioId(Number(e.target.value))}
+            className="ml-2 rounded-md bg-slate-900/40 p-2 text-sm text-slate-200"
+          >
+            {scenarios.length === 0 && tasks[0]?.scenarioId && (
+              <option value={tasks[0].scenarioId}>{`Scenario ${tasks[0].scenarioId}`}</option>
+            )}
+            {scenarios.map((s) => (
+              <option key={s.id} value={s.id}>{s.name ?? `Scenario ${s.id}`}</option>
+            ))}
+          </select>
+        </div>
         <button
           type="button"
-          onClick={async () => {
+            onClick={async () => {
             // preserve current vertical scroll position so UI doesn't jump
             const prevScroll = typeof window !== "undefined" ? (window.scrollY ?? window.pageYOffset ?? 0) : 0;
             setRunning(true);
             // keep previous `result` visible until new one arrives to avoid layout collapse
             try {
-              const res = await runMonteCarlo({ projectId, runs });
+              const sid = selectedScenarioId ?? tasks[0]?.scenarioId;
+              if (!sid) throw new Error("No scenario selected for simulation");
+              const res = await runMonteCarlo({ scenarioId: sid, runs });
               setResult(res);
               // restore scroll after render (defensive: ensure finite number and rAF availability)
               if (typeof window !== "undefined") {

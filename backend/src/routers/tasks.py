@@ -17,12 +17,12 @@ from src.db.models.relation import Relation
 from collections import deque
 from src.schemas.task import TaskCreate, TaskOut, TaskReorder, TaskUpdate
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(prefix="/scenarios/{scenario_id}/tasks", tags=["tasks"])
 
 
 @router.get("", response_model=list[TaskOut])
 def list_tasks(
-    project_id: int | None = Query(default=None),
+    scenario_id: int,
     db: Session = Depends(get_db),
 ):
     """List tasks, optionally filtered by project.
@@ -34,10 +34,12 @@ def list_tasks(
     Returns:
         list[Task]: Ordered list of tasks for the (optional) project.
     """
-    query = db.query(Task)
-    if project_id is not None:
-        query = query.filter(Task.project_id == project_id)
-    tasks = query.order_by(Task.order_index.asc()).all()
+    tasks = (
+        db.query(Task)
+        .filter(Task.scenario_id == scenario_id)
+        .order_by(Task.order_index.asc())
+        .all()
+    )
 
     # include relations as dependencies in the returned Task objects so frontend
     # sees relations created via the relations endpoints as task.dependencies
@@ -64,7 +66,7 @@ def list_tasks(
 
 
 @router.post("", response_model=TaskOut, status_code=201)
-def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
+def create_task(scenario_id: int, payload: TaskCreate, db: Session = Depends(get_db)):
     """Create a new task within a project.
 
     Args:
@@ -77,12 +79,19 @@ def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
 
     max_order = (
         db.query(func.max(Task.order_index))
-        .filter(Task.project_id == payload.project_id)
+        .filter(Task.scenario_id == scenario_id)
         .scalar()
         or 0
     )
+    # ensure we set the task.project_id from the scenario (scenario -> project association)
+    # load Scenario model to get project id
+    from src.db.models.scenario import Scenario
+    scenario_obj = db.query(Scenario).filter(Scenario.id == scenario_id).first()
+    if scenario_obj is None:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+
     task = Task(
-        project_id=payload.project_id,
+        scenario_id=scenario_id,
         title=payload.title,
         description=payload.description,
         status=payload.status,
@@ -95,19 +104,11 @@ def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(task)
     return task
-    """Create a new task within a project.
-
-    Args:
-        payload (TaskCreate): Pydantic payload with task data.
-        db (Session): Database session provided by dependency.
-
-    Returns:
-        Task: The created task.
-    """
+    
 
 
 @router.put("/{task_id}", response_model=list[TaskOut])
-def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)):
+def update_task(scenario_id: int, task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)):
     """Update a task and propagate date changes to successors if needed.
 
     Args:
@@ -118,15 +119,17 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
     Returns:
         list[Task]: List of updated tasks after propagation.
     """
-    task = db.query(Task).filter(Task.id == task_id).first()
+    task = db.query(Task).filter(Task.id == task_id, Task.scenario_id == scenario_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
     fields_set = payload.model_fields_set
     if "title" in fields_set:
         task.title = payload.title
-    if "project_id" in fields_set:
-        task.project_id = payload.project_id
+    if "scenario_id" in fields_set:
+        # disallow changing scenario to a different one via this scoped endpoint
+        if payload.scenario_id is not None and payload.scenario_id != scenario_id:
+            raise HTTPException(status_code=400, detail="Cannot change scenario via this endpoint")
     if "description" in fields_set:
         task.description = payload.description
     if "status" in fields_set:
@@ -159,8 +162,8 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
             if len(tasks_for_src) != len(new_src_ids):
                 raise HTTPException(status_code=400, detail="One or more dependency task IDs are invalid")
             for t_src in tasks_for_src:
-                if t_src.project_id != task.project_id:
-                    raise HTTPException(status_code=400, detail="Dependency tasks must belong to the same project")
+                if t_src.scenario_id != task.scenario_id:
+                    raise HTTPException(status_code=400, detail="Dependency tasks must belong to the same scenario")
 
         # create missing relations
         for src_id in new_src_ids - existing_src_ids:
@@ -205,19 +208,19 @@ def _propagate_date_changes(changed_task_ids: list[int], db: Session):
     if not changed_task_ids:
         return
 
-    # load all tasks in the same project(s) as changed tasks
-    # collect affected project ids
+    # load all tasks in the same scenario(s) as changed tasks
+    # collect affected scenario ids
     changed_tasks = db.query(Task).filter(Task.id.in_(changed_task_ids)).all()
-    project_ids = {t.project_id for t in changed_tasks}
+    scenario_ids = {t.scenario_id for t in changed_tasks}
 
     # nothing to do if no matching changed tasks were found
-    if not project_ids:
+    if not scenario_ids:
         return
 
-    tasks = db.query(Task).filter(Task.project_id.in_(list(project_ids))).all()
+    tasks = db.query(Task).filter(Task.scenario_id.in_(list(scenario_ids))).all()
     task_map: dict[int, Task] = {t.id: t for t in tasks}
 
-    # load relations inside the project(s)
+    # load relations inside the scenario(s)
     rels = (
         db.query(Relation)
         .filter(Relation.source_task_id.in_(list(task_map.keys())))
@@ -285,15 +288,25 @@ def _propagate_date_changes(changed_task_ids: list[int], db: Session):
 
 
 
+@router.get("/{task_id}", response_model=TaskOut)
+def get_task(scenario_id: int, task_id: int, db: Session = Depends(get_db)):
+    """Get a single task by id within a scenario."""
+    task = db.query(Task).filter(Task.id == task_id, Task.scenario_id == scenario_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+
+
+
 @router.delete("/{task_id}", status_code=204)
-def delete_task(task_id: int, db: Session = Depends(get_db)):
+def delete_task(scenario_id: int, task_id: int, db: Session = Depends(get_db)):
     """Delete a task by ID.
 
     Args:
         task_id (int): ID of the task to delete.
         db (Session): Database session provided by dependency.
     """
-    task = db.query(Task).filter(Task.id == task_id).first()
+    task = db.query(Task).filter(Task.id == task_id, Task.scenario_id == scenario_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     db.delete(task)
@@ -304,7 +317,7 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/reorder", response_model=list[TaskOut])
-def reorder_tasks(payload: TaskReorder, db: Session = Depends(get_db)):
+def reorder_tasks(scenario_id: int, payload: TaskReorder, db: Session = Depends(get_db)):
     """Reorder tasks according to `payload.ordered_ids`.
 
     Args:
@@ -314,9 +327,9 @@ def reorder_tasks(payload: TaskReorder, db: Session = Depends(get_db)):
     Returns:
         list[Task]: Tasks in their new order.
     """
-    tasks = db.query(Task).filter(Task.id.in_(payload.ordered_ids)).all()
+    tasks = db.query(Task).filter(Task.id.in_(payload.ordered_ids), Task.scenario_id == scenario_id).all()
     if len(tasks) != len(payload.ordered_ids):
-        raise HTTPException(status_code=400, detail="One or more task IDs are invalid")
+        raise HTTPException(status_code=400, detail="One or more task IDs are invalid for this scenario")
 
     task_map = {task.id: task for task in tasks}
     for index, task_id in enumerate(payload.ordered_ids, start=1):
@@ -325,7 +338,7 @@ def reorder_tasks(payload: TaskReorder, db: Session = Depends(get_db)):
     db.commit()
     ordered_tasks = (
         db.query(Task)
-        .filter(Task.id.in_(payload.ordered_ids))
+        .filter(Task.id.in_(payload.ordered_ids), Task.scenario_id == scenario_id)
         .order_by(Task.order_index.asc())
         .all()
     )
@@ -333,7 +346,7 @@ def reorder_tasks(payload: TaskReorder, db: Session = Depends(get_db)):
 
 
 @router.get("/export")
-def export_tasks_csv(project_id: int = Query(...), db: Session = Depends(get_db)):
+def export_tasks_csv(scenario_id: int, db: Session = Depends(get_db)):
     """Export tasks for a project as CSV.
 
     Args:
@@ -345,7 +358,7 @@ def export_tasks_csv(project_id: int = Query(...), db: Session = Depends(get_db)
     """
     tasks = (
         db.query(Task)
-        .filter(Task.project_id == project_id)
+        .filter(Task.scenario_id == scenario_id)
         .order_by(Task.order_index.asc())
         .all()
     )
@@ -385,6 +398,6 @@ def export_tasks_csv(project_id: int = Query(...), db: Session = Depends(get_db)
         ])
 
     si.seek(0)
-    headers = {"Content-Disposition": f'attachment; filename="project_{project_id}_tasks.csv"'}
+    headers = {"Content-Disposition": f'attachment; filename="scenario_{scenario_id}_tasks.csv"'}
     return StreamingResponse(iter([si.getvalue()]), media_type="text/csv", headers=headers)
 

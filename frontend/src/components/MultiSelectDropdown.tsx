@@ -10,16 +10,18 @@ interface Props {
   options: Option[];
   selectedIds: number[];
   onChange: (ids: number[]) => void;
+  disabledIds?: number[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
 }
 
-export const MultiSelectDropdown = ({
+const MultiSelectDropdown = ({
   label,
   options,
   selectedIds,
   onChange,
+  disabledIds = [],
   open: controlledOpen,
   onOpenChange,
   hideTrigger = false,
@@ -30,13 +32,6 @@ export const MultiSelectDropdown = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      // focus search input when opening
-      setTimeout(() => searchRef.current?.focus(), 0);
-    }
-  }, [open]);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -61,22 +56,18 @@ export const MultiSelectDropdown = ({
 
   const filtered = options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()));
 
+  const disabledSet = new Set<number>(disabledIds || []);
+
   const toggleId = (id: number) => {
+    if (disabledSet.has(id)) return;
     const next = new Set<number>(selectedIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);
     onChange(Array.from(next));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      setOpen(false);
-    }
-  };
-
   return (
-    <div className="relative" ref={containerRef} onKeyDown={handleKeyDown}>
+    <div ref={containerRef} className="relative w-full">
       {!hideTrigger && (
         <button
           type="button"
@@ -115,8 +106,10 @@ export const MultiSelectDropdown = ({
               <ul className="flex flex-col gap-2">
                 {filtered.map((o) => {
                   const active = selectedIds.includes(o.id);
+                  const isDisabled = disabledSet.has(o.id);
                   const baseCls = "rounded-lg border border-slate-900 bg-slate-900/40 p-3 cursor-pointer hover:bg-slate-800/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500";
                   const activeCls = "bg-indigo-600 text-white ring-2 ring-indigo-500 border-indigo-600";
+                  const disabledCls = "opacity-50 cursor-not-allowed";
                   return (
                     <li key={o.id}>
                       <div
@@ -130,7 +123,7 @@ export const MultiSelectDropdown = ({
                             toggleId(o.id);
                           }
                         }}
-                        className={`${baseCls} ${active ? activeCls : ""}`}
+                        className={`${baseCls} ${active ? activeCls : ""} ${isDisabled ? disabledCls : ""}`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="text-sm font-medium">{o.label}</div>

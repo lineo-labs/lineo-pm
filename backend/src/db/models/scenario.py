@@ -7,6 +7,7 @@ configuration belonging to a project.
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, text
+from sqlalchemy.orm import relationship
 
 from src.db.models.base import Base
 
@@ -30,3 +31,5 @@ class Scenario(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     # mark whether this scenario is the baseline; default False at Python and DB level
     is_baseline = Column(Boolean, nullable=False, default=False, server_default=text('false'))
+    # tasks belonging to this scenario
+    tasks = relationship("Task", back_populates="scenario", cascade="all, delete-orphan")

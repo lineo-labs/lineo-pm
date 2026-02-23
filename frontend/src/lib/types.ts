@@ -18,7 +18,7 @@ export interface ProjectUpdate {
 
 export interface Task {
   id: number;
-  projectId: number;
+  scenarioId: number;
   title: string;
   description?: string;
   status: TaskStatus;
@@ -41,19 +41,8 @@ export interface Scenario {
   projectId: number;
   name: string;
   description?: string;
+  isBaseline?: boolean;
   createdAt: string;
 }
 
-export interface ScenarioTask {
-  id: number;
-  scenarioId: number;
-  taskId?: number;
-  title: string;
-  description?: string;
-  status: TaskStatus;
-  startDate: string;
-  endDate: string;
-  dependencies: number[];
-  overrides?: Record<string, any> | null;
-  orderIndex?: number;
-}
+// `ScenarioTask` removed — scenario tasks are represented by `Task` with optional `baselineId`

@@ -1,6 +1,6 @@
 import { parseISODate, businessDaysBetweenInclusive, diffInDaysSigned } from '../../lib/dateRange';
 
-type TaskInput = { id: number; startDate: string; endDate: string };
+type TaskInput = { id: number; startDate: string; endDate: string; title?: string };
 
 export type ScenarioDeltas = {
   totalDeltaDays: number;
@@ -19,17 +19,22 @@ export function computeScenarioDeltas(
   scenarioTasks: TaskInput[] | null
 ): ScenarioDeltas | null {
   if (scenarioTasks === null || visibleTasks.length === 0) return null;
-  const scenMap = new Map<number, TaskInput>();
-  const baseMap = new Map<number, TaskInput>();
+  // use normalized task title as matching key (fallback to id when title missing)
+  const scenMap = new Map<string, TaskInput>();
+  const baseMap = new Map<string, TaskInput>();
   for (const s of scenarioTasks) {
-    if (s && typeof s.id === 'number') scenMap.set(s.id, s);
+    if (!s || typeof s.id !== 'number') continue;
+    const nameKey = (s as any).title ? String((s as any).title).trim().toLowerCase() : String(s.id);
+    scenMap.set(nameKey, { id: s.id, startDate: s.startDate, endDate: s.endDate, title: (s as any).title });
   }
   for (const b of visibleTasks) {
-    if (b && typeof b.id === 'number') baseMap.set(b.id, b);
+    if (!b || typeof b.id !== 'number') continue;
+    const nameKey = (b as any).title ? String((b as any).title).trim().toLowerCase() : String(b.id);
+    baseMap.set(nameKey, { id: b.id, startDate: b.startDate, endDate: b.endDate, title: (b as any).title });
   }
 
-  // union of ids so scenario-only tasks are considered
-  const idSet = new Set<number>([...baseMap.keys(), ...scenMap.keys()]);
+  // union of keys so scenario-only tasks are considered
+  const keySet = new Set<string>([...baseMap.keys(), ...scenMap.keys()]);
 
   let totalDeltaDays = 0;
 
@@ -43,9 +48,9 @@ export function computeScenarioDeltas(
   const scenCount = scenMap.size || baseMap.size; // scenMap may include replacements and new tasks
   const activityDelta = scenCount - baseCount;
 
-  for (const id of idSet) {
-    const base = baseMap.get(id) ?? null;
-    const s = scenMap.get(id) ?? null;
+  for (const key of keySet) {
+    const base = baseMap.get(key) ?? null;
+    const s = scenMap.get(key) ?? null;
 
     // If both missing or any missing dates, skip this id for per-task day deltas but still allow
     // scenario-only tasks to contribute via origDays=0.

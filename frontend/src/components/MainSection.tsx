@@ -113,6 +113,7 @@ export const MainSection = ({
       </div>
 
       <GanttLayout
+        projectId={project?.id}
         tasks={tasks}
         milestones={milestones}
         onEditTask={setEditingTask}

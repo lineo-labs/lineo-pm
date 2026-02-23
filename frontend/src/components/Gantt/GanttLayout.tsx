@@ -28,10 +28,11 @@ import { GanttTaskList } from "./GanttTaskList";
 import { TaskEditDialog } from "../TaskEditDialog";
 import { GanttRelations } from "./GanttRelations";
 import { computeScenarioDeltas } from "./ganttUtils";
-import { createScenario, createScenarioTask, updateScenarioTask, fetchScenarios, fetchScenarioTasks, deleteScenario } from "../../lib/api";
+import { createScenario, createScenarioTask, updateScenarioTask, fetchScenarios, fetchScenarioTasks, deleteScenario, promoteScenarioToBaseline } from "../../lib/api";
 import MonteCarloPanel from "../MonteCarloPanel";
 
 interface GanttLayoutProps {
+  projectId?: number;
   tasks: Task[];
   milestones: Milestone[];
   onEditTask: (task: Task) => void;
@@ -49,6 +50,7 @@ const MONTH_WIDTH = 160;
 const HEADER_HEIGHT = 38;
 
 export const GanttLayout = ({
+  projectId: projectIdProp,
   tasks,
   milestones,
   onEditTask,
@@ -73,6 +75,7 @@ export const GanttLayout = ({
   const [scenarioMode, setScenarioMode] = useState(false);
   const [scenarioTasks, setScenarioTasks] = useState<Task[] | null>(null);
   const [editingScenarioTask, setEditingScenarioTask] = useState<Task | null>(null);
+  const [baselineTasks, setBaselineTasks] = useState<Task[] | null>(null);
   const [savingScenario, setSavingScenario] = useState(false);
   const [showLoadMenu, setShowLoadMenu] = useState(false);
   const [availableScenarios, setAvailableScenarios] = useState<{ id: number; name: string }[] | null>(null);
@@ -248,14 +251,22 @@ export const GanttLayout = ({
     return tasks.filter((t) => !(t.status && t.status.toLowerCase() === "done"));
   }, [tasks, hideDone]);
 
-  // left column list: when in scenario mode, merge baseline tasks with scenario edits
+  // left column list: when in scenario mode, show only scenario tasks
   const leftColumnTasks = useMemo(() => {
     if (!scenarioMode || !scenarioTasks) return visibleTasks;
-    const map = new Map<number, Task>();
-    for (const t of tasks) map.set(t.id, t);
-    // overlay scenario tasks (replace existing or add new scenario-only tasks)
-    for (const st of scenarioTasks) map.set(st.id, st);
-    return Array.from(map.values()).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    // map ScenarioTask -> Task shape for the left column; do NOT merge baseline tasks here
+    const mapped = scenarioTasks.map((st) => ({
+      id: st.id,
+      scenarioId: st.scenarioId ?? (typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? 0),
+      title: st.title,
+      description: st.description ?? undefined,
+      status: st.status,
+      startDate: st.startDate,
+      endDate: st.endDate,
+      dependencies: st.dependencies ?? [],
+      orderIndex: st.orderIndex,
+    } as Task));
+    return mapped.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
   }, [scenarioMode, scenarioTasks, tasks, visibleTasks]);
 
   // When in scenario mode, display scenarioTasks (which may include scenario-only tasks)
@@ -321,7 +332,7 @@ export const GanttLayout = ({
 
   const createScenarioTaskLocal = () => {
     const localId = tempIdRef.current--;
-    const projectId = tasks[0]?.projectId ?? 0;
+    const projectId = (typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId) ?? 0;
     const today = new Date();
     const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
     const startDate = start.toISOString().slice(0, 10);
@@ -329,7 +340,7 @@ export const GanttLayout = ({
 
     const newTask: Task = {
       id: localId,
-      projectId,
+      scenarioId: projectId,
       title: "New task",
       description: undefined,
       status: "todo",
@@ -337,7 +348,6 @@ export const GanttLayout = ({
       endDate,
       dependencies: [],
       orderIndex: 0,
-      overrides: undefined,
     } as Task;
 
     setScenarioTasks((prev) => {
@@ -349,7 +359,7 @@ export const GanttLayout = ({
     });
 
     // open editor for the newly created scenario task
-    setEditingScenarioTask({ ...newTask });
+    setEditingScenarioTask({ ...newTask } as any);
   };
 
   // typed no-op handlers for base vs scenario wiring
@@ -485,8 +495,11 @@ export const GanttLayout = ({
             type="button"
             onClick={() => {
               if (!scenarioMode) {
-                // enter scenario: clone tasks into temporary state
-                setScenarioTasks(tasks.map((t) => ({ ...t })));
+                // enter scenario: clone baseline tasks into temporary scenarioTasks
+                // baseline reference is kept in the scenario-task DTOs from the server
+                setScenarioTasks(tasks.map((t) => ({ ...(t as any) })) as Task[]);
+                // set baselineTasks to the current baseline tasks (the provided `tasks` are baseline)
+                setBaselineTasks(tasks.map((t) => ({ ...t })));
                 setScenarioMode(true);
               } else {
                 // exit scenario and discard
@@ -513,7 +526,7 @@ export const GanttLayout = ({
               type="button"
               onClick={async () => {
                 // always fetch latest scenarios when opening menu
-                const projectId = tasks[0]?.projectId ?? undefined;
+                  const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
                 try {
                   setShowLoadMenu((s) => !s);
                   const list = await fetchScenarios(projectId);
@@ -539,20 +552,40 @@ export const GanttLayout = ({
                       onClick={async () => {
                         try {
                           const tasksForScenario = await fetchScenarioTasks(s.id);
-                          // map tasks (include scenario-only tasks as well)
-                          const mapped = tasksForScenario.map((st) => ({
-                            id: st.taskId ?? (tempIdRef.current--),
-                            projectId: tasks[0]?.projectId ?? 0,
-                            title: st.title,
-                            description: st.description ?? undefined,
-                            status: st.status as any,
-                            startDate: st.startDate,
-                            endDate: st.endDate,
-                            dependencies: st.dependencies ?? [],
-                            orderIndex: st.orderIndex,
-                            overrides: st.overrides ?? undefined,
-                          }));
-                          setScenarioTasks(mapped as any);
+                          // tasksForScenario includes `taskId` in the raw object (not on the `Task` type)
+                          setScenarioTasks(tasksForScenario as Task[]);
+                          // if UI needs baseline tasks for comparison, fetch the project's baseline scenario
+                          try {
+                            const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
+                            if (projectId) {
+                              const scenarios = await fetchScenarios(projectId);
+                              const baseline = scenarios.find((s: any) => (s as any).isBaseline === true) ?? scenarios[0];
+                              if (baseline) {
+                                const baselineDtos = await fetchScenarioTasks(baseline.id);
+                                // baselineDtos are scenario-task DTOs; when present use the linked
+                                // `taskId` (the original baseline task id) so we can match
+                                // scenario tasks to their baseline counterparts correctly.
+                                setBaselineTasks(
+                                  baselineDtos.map((st) => ({
+                                    id: (st as any).taskId ?? st.id,
+                                    scenarioId: st.scenarioId,
+                                    title: st.title,
+                                    description: st.description ?? undefined,
+                                    status: st.status,
+                                    startDate: st.startDate,
+                                    endDate: st.endDate,
+                                    dependencies: st.dependencies ?? [],
+                                    orderIndex: st.orderIndex,
+                                  }))
+                                );
+                              } else {
+                                setBaselineTasks(null);
+                              }
+                            }
+                          } catch (e) {
+                            console.error(e);
+                            setBaselineTasks(null);
+                          }
                           setScenarioMode(true);
                           setSelectedScenarioId(s.id);
                           setShowLoadMenu(false);
@@ -570,7 +603,7 @@ export const GanttLayout = ({
                           const confirmed = confirm(`Delete scenario "${s.name}"?`);
                           if (!confirmed) return;
                           try {
-                            const projectId = tasks[0]?.projectId ?? undefined;
+                            const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
                             await deleteScenario(s.id);
                             const list = await fetchScenarios(projectId);
                             const mappedList = list.map((ss) => ({ id: ss.id, name: ss.name }));
@@ -589,6 +622,28 @@ export const GanttLayout = ({
                         className="ml-2 text-xs px-2 py-1 rounded-md border bg-transparent text-red-400 border-red-600"
                       >
                         Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const confirmed = confirm(`Promote scenario "${s.name}" to baseline?`);
+                          if (!confirmed) return;
+                          try {
+                            const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
+                            await promoteScenarioToBaseline(s.id);
+                            const list = await fetchScenarios(projectId);
+                            const mappedList = list.map((ss) => ({ id: ss.id, name: ss.name }));
+                            setAvailableScenarios(mappedList);
+                            alert("Scenario promoted to baseline");
+                          } catch (err) {
+                            console.error(err);
+                            alert(`Failed to promote scenario: ${String(err)}`);
+                          }
+                        }}
+                        className="ml-2 text-xs px-2 py-1 rounded-md border bg-transparent text-amber-300 border-amber-600"
+                      >
+                        Promote
                       </button>
                     </div>
                   ))}
@@ -632,7 +687,7 @@ export const GanttLayout = ({
                       if (!saveName || !scenarioTasks) return;
                       try {
                         setSavingScenario(true);
-                        const projectId = tasks[0]?.projectId ?? 0;
+                        const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? 0;
                         const scenario = await createScenario({ projectId, name: saveName, description: null });
 
                         const mapping = new Map<number, number>(); // local id -> created scenario_task id
@@ -648,7 +703,7 @@ export const GanttLayout = ({
                             endDate: st.endDate,
                             orderIndex: st.orderIndex ?? idx + 1,
                             dependencies: [],
-                            overrides: (st as any).overrides ?? null,
+                                
                           } as const;
 
                           const created = await createScenarioTask(scenario.id, payload as any);
@@ -804,8 +859,20 @@ export const GanttLayout = ({
 
                 // scenarioMode: render scenario task directly. If it maps to a baseline
                 // task, we render a faint base bar underneath.
-                const scenarioTask = task; // already from scenarioTasks when in scenarioMode
-                const baseTask = tasks.find((t) => t.id === scenarioTask.id);
+                const scenarioTask = task as Task; // already from scenarioTasks when in scenarioMode
+                // baseline task id is returned by the scenario-task DTO as `taskId`.
+                // prefer `baselineTasks` fetched for the project if available, otherwise fall back to `tasks` prop
+                const baseCollection = baselineTasks ?? tasks;
+                // Prefer server-provided `taskId` when available, but many backends
+                // create scenario tasks with new ids. Try id-based matching first
+                // then fall back to title-based matching (case-insensitive trimmed)
+                // because `taskId` may not match in some flows.
+                const taskIdRef = (scenarioTask as any).taskId ?? undefined;
+                const titleKey = String((scenarioTask.title ?? "")).trim().toLowerCase();
+                let baseTask = taskIdRef ? baseCollection.find((t) => t.id === taskIdRef) : undefined;
+                if (!baseTask && titleKey) {
+                  baseTask = baseCollection.find((t) => String((t.title ?? "")).trim().toLowerCase() === titleKey);
+                }
                 const basePos = baseTask ? getTaskPosition(baseTask) : { offset: 0, width: 0 };
                 const scenarioPos = getTaskPosition(scenarioTask);
 
@@ -836,11 +903,13 @@ export const GanttLayout = ({
                         aria-hidden
                         style={{
                           position: "absolute",
-                          top: ROW_HEIGHT - 12,
+                          // align baseline bar with the scenario bar vertically so it remains visible
+                          top: 2,
                           left: basePos.offset,
                           width: basePos.width,
                           pointerEvents: "none",
-                          zIndex: 25,
+                          // render behind the interactive scenario bar so it appears as a faint baseline
+                          zIndex: 10,
                         }}
                       >
                         <GanttBar
@@ -923,7 +992,7 @@ export const GanttLayout = ({
       <div className="mt-3 grid grid-cols-[300px_1fr] gap-0">
         <div className="px-4 col-span-2">
           <div className="max-w-full">
-            <MonteCarloPanel projectId={tasks[0]?.projectId ?? 0} tasks={visibleTasks} />
+            <MonteCarloPanel projectId={typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? 0} tasks={visibleTasks} />
           </div>
         </div>
       </div>

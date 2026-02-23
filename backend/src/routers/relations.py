@@ -11,23 +11,23 @@ router = APIRouter(prefix="/relations", tags=["relations"])
 
 
 @router.get("", response_model=list[RelationOut])
-def list_relations(project_id: int | None = Query(default=None), db: Session = Depends(get_db)):
+def list_relations(scenario_id: int | None = Query(default=None), db: Session = Depends(get_db)):
     query = db.query(Relation)
-    if project_id is not None:
-        # relations table doesn't store project_id; join to tasks and filter by task.project_id
-        query = query.join(Task, Relation.source_task_id == Task.id).filter(Task.project_id == project_id)
+    if scenario_id is not None:
+        # relations table doesn't store scenario_id; join to tasks and filter by task.scenario_id
+        query = query.join(Task, Relation.source_task_id == Task.id).filter(Task.scenario_id == scenario_id)
 
     rels = query.order_by(Relation.id_relation.asc()).all()
 
-    # build response objects including project_id (derived from source task)
+    # build response objects including scenario_id (derived from source task)
     out: list[RelationOut] = []
     for r in rels:
         src = db.get(Task, r.source_task_id)
-        project_id_val = src.project_id if src is not None else None
+        scenario_id_val = src.scenario_id if src is not None else None
         out.append(
             RelationOut(
                 id_relation=r.id_relation,
-                project_id=project_id_val,
+                scenario_id=scenario_id_val,
                 source_task_id=r.source_task_id,
                 destination_task_id=r.destination_task_id,
                 relation_type=r.relation_type,
@@ -41,14 +41,14 @@ def create_relation(payload: RelationCreate, db: Session = Depends(get_db)):
     if payload.relation_type != "FS":
         raise HTTPException(status_code=400, detail="Only 'FS' relation_type is supported")
 
-    # validate tasks exist and belong to the same project
+    # validate tasks exist and belong to the same scenario
     task_ids = [payload.source_task_id, payload.destination_task_id]
     tasks = db.query(Task).filter(Task.id.in_(task_ids)).all()
     if len(tasks) != 2:
         raise HTTPException(status_code=400, detail="One or more task IDs are invalid")
     for t in tasks:
-        if t.project_id != payload.project_id:
-            raise HTTPException(status_code=400, detail="Tasks must belong to the given project")
+        if t.scenario_id != payload.scenario_id:
+            raise HTTPException(status_code=400, detail="Tasks must belong to the given scenario")
 
     rel = Relation(
         source_task_id=payload.source_task_id,
@@ -60,10 +60,10 @@ def create_relation(payload: RelationCreate, db: Session = Depends(get_db)):
     db.refresh(rel)
 
     src = db.get(Task, rel.source_task_id)
-    project_id_val = src.project_id if src is not None else None
+    scenario_id_val = src.scenario_id if src is not None else None
     return RelationOut(
         id_relation=rel.id_relation,
-        project_id=project_id_val,
+        scenario_id=scenario_id_val,
         source_task_id=rel.source_task_id,
         destination_task_id=rel.destination_task_id,
         relation_type=rel.relation_type,
@@ -86,24 +86,24 @@ def update_relation(id_relation: int, payload: RelationUpdate, db: Session = Dep
             raise HTTPException(status_code=400, detail="Only 'FS' relation_type is supported")
         rel.relation_type = payload.relation_type
 
-    # if task ids or project changed, validate consistency
+    # if task ids or scenario changed, validate consistency
     task_ids = [rel.source_task_id, rel.destination_task_id]
     tasks = db.query(Task).filter(Task.id.in_(task_ids)).all()
     if len(tasks) != 2:
         raise HTTPException(status_code=400, detail="One or more task IDs are invalid")
     for t in tasks:
-        # ensure tasks belong to the same project as each other
-        if t.project_id != tasks[0].project_id:
-            raise HTTPException(status_code=400, detail="Tasks must belong to the given project")
+        # ensure tasks belong to the same scenario as each other
+        if t.scenario_id != tasks[0].scenario_id:
+            raise HTTPException(status_code=400, detail="Tasks must belong to the same scenario")
 
     db.commit()
     db.refresh(rel)
 
     src = db.get(Task, rel.source_task_id)
-    project_id_val = src.project_id if src is not None else None
+    scenario_id_val = src.scenario_id if src is not None else None
     return RelationOut(
         id_relation=rel.id_relation,
-        project_id=project_id_val,
+        scenario_id=scenario_id_val,
         source_task_id=rel.source_task_id,
         destination_task_id=rel.destination_task_id,
         relation_type=rel.relation_type,
@@ -171,8 +171,8 @@ def possible_dependencies(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    project_id = task.project_id
-    tasks = db.query(Task).filter(Task.project_id == project_id).all()
+    scenario_id = task.scenario_id
+    tasks = db.query(Task).filter(Task.scenario_id == scenario_id).all()
     task_ids = [t.id for t in tasks]
 
     # load relations within project
@@ -218,19 +218,19 @@ def possible_dependencies(
             allowed_as_pred = False
 
         if allowed_as_pred:
-            out.append(
-                TaskOut(
-                    id=cand.id,
-                    project_id=cand.project_id,
-                    title=cand.title,
-                    description=cand.description,
-                    status=cand.status,
-                    start_date=cand.start_date,
-                    end_date=cand.end_date,
-                    dependencies=cand.dependencies,
-                    order_index=cand.order_index,
+                out.append(
+                    TaskOut(
+                        id=cand.id,
+                        scenario_id=cand.scenario_id,
+                        title=cand.title,
+                        description=cand.description,
+                        status=cand.status,
+                        start_date=cand.start_date,
+                        end_date=cand.end_date,
+                        dependencies=cand.dependencies,
+                        order_index=cand.order_index,
+                    )
                 )
-            )
 
     # build active relations list: only relations that are predecessors
     # to the given task (source -> task_id)
@@ -239,11 +239,11 @@ def possible_dependencies(
         if r.destination_task_id != task_id:
             continue
         src = db.get(Task, r.source_task_id)
-        project_id_val = src.project_id if src is not None else None
+        scenario_id_val = src.scenario_id if src is not None else None
         active.append(
             RelationOut(
                 id_relation=r.id_relation,
-                project_id=project_id_val,
+                scenario_id=scenario_id_val,
                 source_task_id=r.source_task_id,
                 destination_task_id=r.destination_task_id,
                 relation_type=r.relation_type,

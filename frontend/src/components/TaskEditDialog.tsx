@@ -56,7 +56,25 @@ export const TaskEditDialog = ({
   
   const [possibleTasks, setPossibleTasks] = useState<Task[]>([]);
   const [selectedDependencies, setSelectedDependencies] = useState<number[]>([]);
+  const [disabledDependencyIds, setDisabledDependencyIds] = useState<number[]>([]);
   const [depsOpen, setDepsOpen] = useState(false);
+
+  const buildDepsMap = (tasks: Task[]) => {
+    const m = new Map<number, number[]>();
+    tasks.forEach((t) => m.set(t.id, t.dependencies ?? []));
+    return m;
+  };
+
+  const hasPath = (start: number, target: number, depsMap: Map<number, number[]>, visited = new Set<number>()): boolean => {
+    if (visited.has(start)) return false;
+    visited.add(start);
+    const deps = depsMap.get(start) ?? [];
+    for (const d of deps) {
+      if (d === target) return true;
+      if (hasPath(d, target, depsMap, visited)) return true;
+    }
+    return false;
+  };
 
   useEffect(() => {
     if (!task) {
@@ -74,7 +92,7 @@ export const TaskEditDialog = ({
       try {
         const [resRes, allRes] = await Promise.allSettled([
           fetchPossibleDependencies(task.id, "predecessors"),
-          getAllTasks(task.projectId),
+          getAllTasks(task.scenarioId),
         ]);
 
         const possibleRaw: any[] =
@@ -85,7 +103,7 @@ export const TaskEditDialog = ({
 
         const possibleMapped: Task[] = possibleRaw.map((p: any) => ({
           id: p.id,
-          projectId: p.projectId,
+          scenarioId: p.scenarioId ?? p.projectId,
           title: p.title,
           description: p.description,
           status: p.status,
@@ -114,9 +132,17 @@ export const TaskEditDialog = ({
 
         setPossibleTasks(finalTasks);
 
+        // compute disabled ids: any candidate that (transitively) depends on current task
+        const depsMap = buildDepsMap(allTasks);
+        const disabled = finalTasks
+          .filter((t) => t.id !== task.id && hasPath(t.id, task.id, depsMap))
+          .map((t) => t.id);
+        setDisabledDependencyIds(disabled);
+
         // only keep pre-existing dependencies that are present in final options
+        // and exclude any that are blocked (would create a cycle)
         const possibleIds = new Set(finalTasks.map((t) => t.id));
-        const filteredSelected = (task.dependencies ?? []).filter((id) => possibleIds.has(id));
+        const filteredSelected = (task.dependencies ?? []).filter((id) => possibleIds.has(id) && !disabled.includes(id));
         setSelectedDependencies(filteredSelected);
       } catch (err) {
         setPossibleTasks([]);
@@ -133,7 +159,7 @@ export const TaskEditDialog = ({
       try {
         const [resRes, allRes] = await Promise.allSettled([
           fetchPossibleDependencies(task.id, "predecessors"),
-          getAllTasks(task.projectId),
+          getAllTasks(task.scenarioId),
         ]);
 
         const possibleRaw: any[] =
@@ -144,7 +170,7 @@ export const TaskEditDialog = ({
 
         const possibleMapped: Task[] = possibleRaw.map((p: any) => ({
           id: p.id,
-          projectId: p.projectId,
+          scenarioId: p.scenarioId ?? p.projectId,
           title: p.title,
           description: p.description,
           status: p.status,
@@ -166,7 +192,13 @@ export const TaskEditDialog = ({
         setPossibleTasks(finalTasks);
 
         const possibleIds = new Set(finalTasks.map((t) => t.id));
-        const filteredSelected = (task.dependencies ?? []).filter((id) => possibleIds.has(id));
+        const depsMap = buildDepsMap(allTasks);
+        const disabled = finalTasks
+          .filter((t) => t.id !== task.id && hasPath(t.id, task.id, depsMap))
+          .map((t) => t.id);
+        setDisabledDependencyIds(disabled);
+
+        const filteredSelected = (task.dependencies ?? []).filter((id) => possibleIds.has(id) && !disabled.includes(id));
         setSelectedDependencies(filteredSelected);
       } catch (err) {
         setPossibleTasks([]);
@@ -183,6 +215,9 @@ export const TaskEditDialog = ({
   if (!open || !task) {
     return null;
   }
+
+  // hide tasks that would create a reciprocal/circular dependency
+  const visiblePossibleTasks = possibleTasks.filter((t) => !disabledDependencyIds.includes(t.id));
 
   const handleDelete = async () => {
     if (!task) {
@@ -249,12 +284,13 @@ export const TaskEditDialog = ({
             <div className="mt-1">
               <MultiSelectDropdown
                 label={selectedDependencies.length === 0 ? "Depends on" : `${selectedDependencies.length} selected`}
-                options={possibleTasks.map((t) => ({ id: t.id, label: t.title }))}
+                options={visiblePossibleTasks.map((t) => ({ id: t.id, label: t.title }))}
                 selectedIds={selectedDependencies}
                 open={depsOpen}
                 onOpenChange={(v) => setDepsOpen(v)}
                   hideTrigger={true}
                 onChange={(ids) => {
+                  // since blocked tasks are hidden, just accept ids as-is
                   setSelectedDependencies(ids);
                   if (task && onDependencyChange) {
                     void onDependencyChange(task.id, ids);
@@ -354,16 +390,23 @@ export const TaskEditDialog = ({
             <button
               type="button"
               disabled={disabled}
-              onClick={() =>
+              onClick={() => {
+                  // Filter out any blocked dependencies before saving
+                  const blocked = new Set(disabledDependencyIds);
+                  const filteredDeps = selectedDependencies.filter((id) => !blocked.has(id));
+                  if (filteredDeps.length !== selectedDependencies.length) {
+                    alert("Impossibile creare una relazione circolare: il task selezionato dipende già da questo task.");
+                  }
                   onSave(task.id, {
                     title: title.trim(),
                     description: description.trim() || undefined,
                     status,
                     startDate,
                     endDate,
-                    dependencies: selectedDependencies,
-                  })
+                    dependencies: filteredDeps,
+                  });
                 }
+              }
               className="rounded-md bg-indigo-500 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
             >
               Save

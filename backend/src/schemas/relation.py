@@ -10,7 +10,7 @@ class RelationBase(BaseModel):
 
     Only finish-to-start ('FS') relations are supported currently.
     """
-    project_id: int
+    scenario_id: int
     source_task_id: int
     destination_task_id: int
     relation_type: Literal["FS"] = "FS"  # only "Finish to Start" supported for now
@@ -23,7 +23,7 @@ class RelationCreate(RelationBase):
 
 class RelationUpdate(BaseModel):
     """Schema for partially updating a relation."""
-    project_id: Optional[int] = None
+    scenario_id: Optional[int] = None
     source_task_id: Optional[int] = None
     destination_task_id: Optional[int] = None
     relation_type: Optional[Literal["FS"]] = None

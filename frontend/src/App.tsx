@@ -12,6 +12,8 @@ import {
   deleteMilestone,
   fetchMilestones,
   fetchProjects,
+  fetchScenarios,
+  fetchScenarioTasks,
   getAllTasks,
   fetchUpdates,
   reorderTasks,
@@ -25,6 +27,7 @@ import type { Milestone, Project, ProjectUpdate, Task, TaskStatus } from "./lib/
 export const App = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -58,6 +61,7 @@ export const App = () => {
     return () => {
       active = false;
     };
+
   }, []);
 
   useEffect(() => {
@@ -116,24 +120,66 @@ export const App = () => {
       return;
     }
     let active = true;
-    fetchMilestones(selectedProjectId)
-      .then((data) => {
-        if (!active) {
-          return;
+    // load tasks for the baseline scenario if selected
+    const load = async () => {
+      if (!selectedScenarioId) {
+        // if no selected scenario, try to fetch scenarios and pick baseline
+        try {
+          const scenarios = await fetchScenarios(selectedProjectId);
+          const baseline = scenarios.find((s: any) => (s as any).isBaseline === true) ?? scenarios[0];
+            if (baseline) {
+            setSelectedScenarioId(baseline.id);
+            const t = await fetchScenarioTasks(baseline.id);
+            if (!active) return;
+            setTasks(t.map((st) => ({
+              id: st.id,
+              scenarioId: st.scenarioId,
+              title: st.title,
+              description: st.description ?? undefined,
+              status: st.status,
+              startDate: st.startDate,
+              endDate: st.endDate,
+              dependencies: st.dependencies ?? [],
+              orderIndex: st.orderIndex,
+                
+            })));
+          } else {
+            setTasks([]);
+          }
+        } catch (err) {
+          if (!active) return;
+          setError(err instanceof Error ? err.message : "API error");
         }
-        setMilestones(data);
-      })
-      .catch((err) => {
-        if (!active) {
-          return;
-        }
+        return;
+      }
+
+      // if scenario selected, fetch its tasks
+      try {
+        const t = await fetchScenarioTasks(selectedScenarioId);
+        if (!active) return;
+        setTasks(t.map((st) => ({
+          id: st.id,
+          scenarioId: st.scenarioId,
+          title: st.title,
+          description: st.description ?? undefined,
+          status: st.status,
+          startDate: st.startDate,
+          endDate: st.endDate,
+          dependencies: st.dependencies ?? [],
+          orderIndex: st.orderIndex,
+        })));
+      } catch (err) {
+        if (!active) return;
         setError(err instanceof Error ? err.message : "API error");
-      });
+      }
+    };
+
+    load();
 
     return () => {
       active = false;
     };
-  }, [selectedProjectId]);
+  }, [selectedProjectId, selectedScenarioId]);
 
   const selectedProject = useMemo<Project | undefined>(() => {
     return projects.find((project) => project.id === selectedProjectId);
@@ -153,6 +199,14 @@ export const App = () => {
       const project = await createProject(payload);
       setProjects((prev) => [...prev, project]);
       setSelectedProjectId(project.id);
+      // load scenarios for the newly created project and select baseline if present
+      try {
+        const scenarios = await fetchScenarios(project.id);
+        const baseline = scenarios.find((s: any) => (s as any).isBaseline === true) ?? scenarios[0];
+        setSelectedScenarioId(baseline?.id ?? null);
+      } catch (e) {
+        setSelectedScenarioId(null);
+      }
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Project creation error");
@@ -166,12 +220,12 @@ export const App = () => {
     startDate: string;
     endDate: string;
   }) => {
-    if (!selectedProjectId) {
+    if (!selectedScenarioId) {
       return;
     }
     try {
       const task = await createTask({
-        projectId: selectedProjectId,
+        scenarioId: selectedScenarioId,
         ...payload,
       });
       setTasks((prev) => [...prev, task]);
@@ -182,10 +236,8 @@ export const App = () => {
   };
 
   const handleCreateUpdate = async (payload: { text: string; taskId?: number }) => {
-    const targetTask = payload.taskId
-      ? tasks.find((task) => task.id === payload.taskId)
-      : undefined;
-    const projectId = targetTask?.projectId ?? selectedProjectId;
+    const targetTask = payload.taskId ? tasks.find((task) => task.id === payload.taskId) : undefined;
+    const projectId = selectedProjectId;
     if (!projectId) {
       return;
     }
@@ -241,7 +293,7 @@ export const App = () => {
     try {
       await updateTask(taskId, payload);
       // reload full list from server to get propagated changes
-      const all = selectedProjectId ? await getAllTasks(selectedProjectId) : [];
+      const all = selectedScenarioId ? await getAllTasks(selectedScenarioId) : [];
       setTasks(all);
       setError(null);
     } catch (err) {
@@ -297,18 +349,84 @@ export const App = () => {
     if (!target) {
       return;
     }
-    const currentStart = parseISODate(target.startDate);
-    const currentEnd = parseISODate(target.endDate);
-    const nextStart = addDays(currentStart, deltaDays);
-    const nextEnd = addDays(currentEnd, deltaDays);
 
-    await handleUpdateTask(taskId, {
-      title: target.title,
-      description: target.description,
-      status: target.status,
-      startDate: toISODate(nextStart),
-      endDate: toISODate(nextEnd),
+    // build map: predecessor -> [dependents]
+    const dependentsMap = new Map<number, number[]>();
+    for (const t of tasks) {
+      for (const dep of t.dependencies ?? []) {
+        const list = dependentsMap.get(dep) ?? [];
+        list.push(t.id);
+        dependentsMap.set(dep, list);
+      }
+    }
+
+    // collect all descendants of the moved task (BFS)
+    const affected = new Set<number>();
+    const queue: number[] = [taskId];
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      const deps = dependentsMap.get(cur) ?? [];
+      for (const d of deps) {
+        if (!affected.has(d)) {
+          affected.add(d);
+          queue.push(d);
+        }
+      }
+    }
+    // include the original task
+    affected.add(taskId);
+
+    const previous = tasks;
+
+    // apply optimistic update: shift all affected tasks by deltaDays
+    const nextTasks = tasks.map((t) => {
+      if (!affected.has(t.id)) return t;
+      const s = parseISODate(t.startDate);
+      const e = parseISODate(t.endDate);
+      return {
+        ...t,
+        startDate: toISODate(addDays(s, deltaDays)),
+        endDate: toISODate(addDays(e, deltaDays)),
+      };
     });
+
+    setTasks(nextTasks);
+
+    try {
+      // update server in an order where predecessors are updated before dependents
+      const updateOrder: number[] = [];
+      const seen = new Set<number>();
+      const q: number[] = [taskId];
+      seen.add(taskId);
+      while (q.length > 0) {
+        const cur = q.shift()!;
+        updateOrder.push(cur);
+        const deps = dependentsMap.get(cur) ?? [];
+        for (const d of deps) {
+          if (!seen.has(d)) {
+            seen.add(d);
+            q.push(d);
+          }
+        }
+      }
+
+      for (const id of updateOrder) {
+        const t = nextTasks.find((x) => x.id === id);
+        if (!t) continue;
+        await updateTask(id, {
+          title: t.title,
+          description: t.description,
+          status: t.status,
+          startDate: t.startDate,
+          endDate: t.endDate,
+        });
+      }
+      setError(null);
+    } catch (err) {
+      // rollback on error
+      setTasks(previous);
+      setError(err instanceof Error ? err.message : "Task update error");
+    }
   };
 
   const handleDeleteTask = async (taskId: number) => {
@@ -345,7 +463,7 @@ export const App = () => {
 
     setTasks(nextTasks);
     try {
-      const updated = await reorderTasks(orderedIds);
+      const updated = await reorderTasks(orderedIds, selectedScenarioId ?? undefined);
       setTasks(updated);
       setError(null);
     } catch (err) {

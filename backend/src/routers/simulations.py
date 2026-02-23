@@ -96,7 +96,7 @@ router = APIRouter(prefix="/simulations", tags=["simulations"])
 
 
 class MonteCarloRequest(BaseModel):
-    project_id: int
+    scenario_id: int
     runs: int = 1000
     # optional overrides: task_id -> "low"|"medium"|"high"
     risk_overrides: Optional[Dict[int, str]] = None
@@ -112,12 +112,12 @@ def run_montecarlo(payload: MonteCarloRequest, db: Session = Depends(get_db)):
     # ---- Load tasks ----
     tasks: List[Task] = (
         db.query(Task)
-        .filter(Task.project_id == payload.project_id)
+        .filter(Task.scenario_id == payload.scenario_id)
         .order_by(Task.order_index.asc())
         .all()
     )
     if not tasks:
-        raise HTTPException(status_code=404, detail="No tasks found for project")
+        raise HTTPException(status_code=404, detail="No tasks found for scenario")
 
     task_ids = [t.id for t in tasks]
     n_tasks = len(tasks)

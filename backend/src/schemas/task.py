@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 
 class TaskBase(BaseModel):
     """Base fields shared by task create/update schemas."""
-    project_id: int
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     status: str = Field("todo", pattern="^(todo|in_progress|done)$")
@@ -24,7 +23,7 @@ class TaskCreate(TaskBase):
 
 class TaskUpdate(BaseModel):
     """Schema for updating task fields (partial update support)."""
-    project_id: Optional[int] = None
+    scenario_id: Optional[int] = None
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     status: Optional[str] = Field(None, pattern="^(todo|in_progress|done)$")
@@ -37,6 +36,7 @@ class TaskOut(TaskBase):
     """Schema returned by the API representing a task."""
     id: int
     order_index: int
+    scenario_id: int
 
     class Config:
         from_attributes = True
