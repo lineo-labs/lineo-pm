@@ -177,7 +177,6 @@ export const createTask = async (payload: {
     startDate: payload.startDate,
     endDate: payload.endDate,
     orderIndex: 0,
-    dependencies: [],
   });
   return toTask({
     id: created.id,
@@ -213,7 +212,6 @@ export const updateTask = async (
     startDate: payload.startDate,
     endDate: payload.endDate,
     orderIndex: payload.orderIndex ?? undefined,
-    dependencies: payload.dependencies ?? undefined,
     taskId: payload.taskId ?? undefined,
   } as any);
   return [toTask({
@@ -263,6 +261,46 @@ export const fetchRelations = async (projectId?: number) => {
     relation_type: string;
   }[]>(response);
   return data;
+};
+
+export const createRelation = async (payload: { source_task_id: number; destination_task_id: number; relation_type?: string; scenario_id?: number }) => {
+  const response = await fetch(`${API_BASE}/relations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      source_task_id: payload.source_task_id,
+      destination_task_id: payload.destination_task_id,
+      relation_type: payload.relation_type ?? "FS",
+      scenario_id: payload.scenario_id,
+    }),
+  });
+  return handleResponse<any>(response);
+};
+
+export const deleteRelation = async (id_relation: number) => {
+  const response = await fetch(`${API_BASE}/relations/${id_relation}`, {
+    method: "DELETE",
+  });
+  return handleVoidResponse(response);
+};
+
+export const setTaskDependencies = async (taskId: number, newDeps: number[], scenarioId?: number) => {
+  // fetch active relations for the task
+  const resp = await fetch(`${API_BASE}/relations/possible?task_id=${taskId}&direction=predecessors`);
+  const data = await handleResponse<{ possible: any[]; active: { id_relation: number; source_task_id: number; destination_task_id: number }[] }>(resp);
+  const existing = new Set<number>(data.active.map((a) => a.source_task_id));
+  const toAdd = newDeps.filter((d) => !existing.has(d));
+  const toRemove = data.active.filter((a) => !newDeps.includes(a.source_task_id));
+
+  // create new relations
+  for (const src of toAdd) {
+    await createRelation({ source_task_id: src, destination_task_id: taskId, relation_type: "FS", scenario_id: scenarioId });
+  }
+
+  // remove removed relations
+  for (const r of toRemove) {
+    await deleteRelation(r.id_relation);
+  }
 };
 
 export const reorderTasks = async (orderedIds: number[], scenarioId?: number) => {
@@ -389,6 +427,8 @@ interface MonteCarloResultDto {
   mean_delay_days_when_slip: number;
   percentiles_days: Record<string, number>;
   per_task_slip_probability: Record<number, number>;
+  critical_index?: Record<number, number>;
+  critical_path?: number[];
 }
 
 export const runMonteCarlo = async (payload: {
@@ -531,7 +571,6 @@ export const createScenarioTask = async (
       start_date: payload.startDate,
       end_date: payload.endDate,
       order_index: payload.orderIndex,
-      dependencies: payload.dependencies ?? [],
     }),
   });
   const data = await handleResponse<ScenarioTaskDto>(response);
@@ -561,7 +600,6 @@ export const updateScenarioTask = async (
       start_date: payload.startDate,
       end_date: payload.endDate,
       order_index: payload.orderIndex,
-      dependencies: payload.dependencies ?? undefined,
       task_id: payload.taskId ?? undefined,
     }),
   });

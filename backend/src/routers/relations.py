@@ -183,6 +183,11 @@ def possible_dependencies(
         .all()
     )
 
+    # map destination -> [sources] for returning dependencies on TaskOut
+    rel_map: dict[int, list[int]] = {}
+    for r in rels:
+        rel_map.setdefault(r.destination_task_id, []).append(r.source_task_id)
+
     """API routes for managing relations between tasks.
 
     Provides endpoints to list, create, update and delete task relations and
@@ -227,7 +232,7 @@ def possible_dependencies(
                         status=cand.status,
                         start_date=cand.start_date,
                         end_date=cand.end_date,
-                        dependencies=cand.dependencies,
+                        dependencies=rel_map.get(cand.id, []),
                         order_index=cand.order_index,
                     )
                 )

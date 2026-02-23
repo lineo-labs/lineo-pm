@@ -55,9 +55,9 @@ def list_tasks(
             rel_map.setdefault(r.destination_task_id, []).append(r.source_task_id)
 
         for t in tasks:
-            existing = set(t.dependencies or [])
+            # Dependencies are derived from the `relations` table only.
             from_rels = set(rel_map.get(t.id, []))
-            merged = sorted(existing.union(from_rels))
+            merged = sorted(from_rels)
             t.dependencies = merged
 
     return tasks
@@ -98,11 +98,25 @@ def create_task(scenario_id: int, payload: TaskCreate, db: Session = Depends(get
         start_date=payload.start_date,
         end_date=payload.end_date,
         order_index=max_order + 1,
-        dependencies=payload.dependencies,
     )
     db.add(task)
     db.commit()
     db.refresh(task)
+    # If the client provided dependencies, persist them as Relation rows
+    new_src_ids = set(payload.dependencies or [])
+    if new_src_ids:
+        # validate existence and same scenario
+        tasks_for_src = db.query(Task).filter(Task.id.in_(list(new_src_ids))).all()
+        if len(tasks_for_src) != len(new_src_ids):
+            raise HTTPException(status_code=400, detail="One or more dependency task IDs are invalid")
+        for t_src in tasks_for_src:
+            if t_src.scenario_id != task.scenario_id:
+                raise HTTPException(status_code=400, detail="Dependency tasks must belong to the same scenario")
+
+        for src_id in new_src_ids:
+            rel = Relation(source_task_id=src_id, destination_task_id=task.id, relation_type="FS")
+            db.add(rel)
+        db.commit()
     return task
     
 
@@ -139,8 +153,7 @@ def update_task(scenario_id: int, task_id: int, payload: TaskUpdate, db: Session
     if "end_date" in fields_set:
         task.end_date = payload.end_date
     if "dependencies" in fields_set:
-        # update JSON column
-        task.dependencies = payload.dependencies
+        # synchronize Relation rows: dependencies list are predecessor task ids
         # synchronize Relation rows: dependencies list are predecessor task ids
         # remove existing predecessor relations for this task that are not in the new list
         existing_rels = (
@@ -166,8 +179,7 @@ def update_task(scenario_id: int, task_id: int, payload: TaskUpdate, db: Session
                     raise HTTPException(status_code=400, detail="Dependency tasks must belong to the same scenario")
 
         # create missing relations
-        for src_id in new_src_ids - existing_src_ids:
-            rel = Relation(source_task_id=src_id, destination_task_id=task.id, relation_type="FS")
+                # synchronize Relation rows: dependencies list are predecessor task ids
             db.add(rel)
 
     # commit the direct update first
@@ -376,9 +388,9 @@ def export_tasks_csv(scenario_id: int, db: Session = Depends(get_db)):
             rel_map.setdefault(r.destination_task_id, []).append(r.source_task_id)
 
         for t in tasks:
-            existing = set(t.dependencies or [])
+            # Dependencies are derived from the `relations` table only.
             from_rels = set(rel_map.get(t.id, []))
-            merged = sorted(existing.union(from_rels))
+            merged = sorted(from_rels)
             t.dependencies = merged
 
     si = io.StringIO()

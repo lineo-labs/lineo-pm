@@ -20,6 +20,7 @@ import {
   updateMilestone,
   updateProject,
   updateTask,
+  setTaskDependencies,
 } from "./lib/api";
 import { addDays, parseISODate, toISODate } from "./lib/dateRange";
 import type { Milestone, Project, ProjectUpdate, Task, TaskStatus } from "./lib/types";
@@ -291,6 +292,10 @@ export const App = () => {
     // minimal optimistic update
     setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, ...payload } : task)));
     try {
+      // first synchronize relations if dependencies provided
+      if (payload.dependencies) {
+        await setTaskDependencies(taskId, payload.dependencies, selectedScenarioId ?? undefined);
+      }
       await updateTask(taskId, payload);
       // reload full list from server to get propagated changes
       const all = selectedScenarioId ? await getAllTasks(selectedScenarioId) : [];

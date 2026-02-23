@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { runMonteCarlo, fetchScenarios } from "../lib/api";
+import { runMonteCarlo, fetchScenarios, fetchTasks } from "../lib/api";
 import type { Task } from "../lib/types";
 
 interface Props {
@@ -13,6 +13,7 @@ export const MonteCarloPanel = ({ projectId, tasks }: Props) => {
   const [runs, setRuns] = useState(1000);
   const [scenarios, setScenarios] = useState<{ id: number; name?: string }[]>([]);
   const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(tasks[0]?.scenarioId ?? null);
+  const [scenarioTaskMap, setScenarioTaskMap] = useState<Record<number, string>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -32,6 +33,36 @@ export const MonteCarloPanel = ({ projectId, tasks }: Props) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!selectedScenarioId) {
+      setScenarioTaskMap({});
+      return () => {
+        mounted = false;
+      };
+    }
+
+    fetchTasks(selectedScenarioId)
+      .then((tlist) => {
+        if (!mounted) return;
+        const map: Record<number, string> = {};
+        if (Array.isArray(tlist)) {
+          tlist.forEach((tt: Task) => {
+            if (tt && typeof tt.id === "number") map[tt.id] = tt.title ?? map[tt.id] ?? "";
+          });
+        }
+        setScenarioTaskMap(map);
+      })
+      .catch(() => {
+        // silently ignore fetch errors for tasks
+      });
+
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedScenarioId]);
 
   return (
     <div className="w-full">
@@ -70,6 +101,19 @@ export const MonteCarloPanel = ({ projectId, tasks }: Props) => {
               if (!sid) throw new Error("No scenario selected for simulation");
               const res = await runMonteCarlo({ scenarioId: sid, runs });
               setResult(res);
+              // fetch tasks for the selected scenario and cache id->title map
+              try {
+                const tlist = await fetchTasks(sid);
+                const map: Record<number, string> = {};
+                if (Array.isArray(tlist)) {
+                  tlist.forEach((tt: Task) => {
+                    if (tt && typeof tt.id === "number") map[tt.id] = tt.title ?? map[tt.id] ?? "";
+                  });
+                }
+                setScenarioTaskMap(map);
+              } catch (e) {
+                // silently ignore fetch errors for tasks
+              }
               // restore scroll after render (defensive: ensure finite number and rAF availability)
               if (typeof window !== "undefined") {
                 const top = Number.isFinite(prevScroll as number) ? (prevScroll as number) : 0;
@@ -167,8 +211,9 @@ export const MonteCarloPanel = ({ projectId, tasks }: Props) => {
                 })()}
               </div>
 
-              {/* Right column: compact per-task slip probabilities (top 10) */}
+              {/* Right column: compact per-task stats (top 10) including slip probability and critical index */}
               <div className="w-64 shrink-0 overflow-auto text-xs text-slate-300">
+                {/*
                 <div className="text-xs text-slate-400 mb-2">Per-task slip probability (top 10)</div>
                 {(() => {
                   const entries = Object.entries(result?.per_task_slip_probability || {}).map(([tid, prob]) => ({ tid, prob: Number(prob) }));
@@ -192,6 +237,47 @@ export const MonteCarloPanel = ({ projectId, tasks }: Props) => {
                     </>
                   );
                 })()} 
+                */}
+
+                <div className="mt-4 text-xs text-slate-400 mb-2">Critical index (top 10)</div>
+                {(() => {
+                  const entries = Object.entries(result?.critical_index || {}).map(([tid, prob]) => ({ tid, prob: Number(prob) }));
+                  if (entries.length === 0) return <div className="text-xs text-slate-400">No critical data</div>;
+                  const top = [...entries].sort((a, b) => b.prob - a.prob).slice(0, 10);
+                  return (
+                    <>
+                      {top.map(({ tid, prob }) => {
+                        const ttitle = scenarioTaskMap[Number(tid)] ?? tasks.find((x) => x.id === Number(tid))?.title ?? `Task ${tid}`;
+                        const displayProb = Number.isFinite(prob) ? `${(prob * 100).toFixed(1)}%` : "N/A";
+                        return (
+                          <div key={`crit-${tid}`} className="mb-2">
+                            <div className="truncate">{ttitle}</div>
+                            <div className="text-xs text-slate-400">{displayProb}</div>
+                          </div>
+                        );
+                      })}
+                      {entries.length > 10 && (
+                        <div className="text-xs text-slate-400 mt-2">+{entries.length - 10} more</div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                <div className="mt-4 text-xs text-slate-400">Most frequent critical path</div>
+                <div className="text-xs mt-1 text-slate-200">
+                  {(() => {
+                    const path: number[] = result?.critical_path || [];
+                    if (!path || path.length === 0) return <div className="text-xs text-slate-400">No critical path</div>;
+                        return (
+                          <ol className="list-decimal list-inside text-xs">
+                            {path.map((tid) => {
+                              const title = scenarioTaskMap[Number(tid)] ?? tasks.find((x) => x.id === Number(tid))?.title ?? `Task ${tid}`;
+                              return <li key={`cp-${tid}`}>{title}</li>;
+                            })}
+                          </ol>
+                        );
+                  })()}
+                </div>
               </div>
             </div>
           </div>

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from src.db.database import get_db
 from src.db.models.scenario import Scenario
 from src.db.models.task import Task
+from src.db.models.relation import Relation
 from src.schemas.scenario import (
     ScenarioCreate,
     ScenarioOut,
@@ -135,11 +136,23 @@ def create_scenario_task(scenario_id: int, payload: TaskCreate, db: Session = De
         start_date=payload.start_date,
         end_date=payload.end_date,
         order_index=max_order + 1,
-        dependencies=payload.dependencies,
     )
     db.add(t)
     db.commit()
     db.refresh(t)
+    # Persist dependencies as Relation rows (do not write into Task.dependencies JSON)
+    new_src_ids = set(payload.dependencies or [])
+    if new_src_ids:
+        tasks_for_src = db.query(Task).filter(Task.id.in_(list(new_src_ids))).all()
+        if len(tasks_for_src) != len(new_src_ids):
+            raise HTTPException(status_code=400, detail="One or more dependency IDs are invalid")
+        for tt in tasks_for_src:
+            if tt.scenario_id != t.scenario_id:
+                raise HTTPException(status_code=400, detail="Dependency task must belong to the same scenario")
+        for src_id in new_src_ids:
+            rel = Relation(source_task_id=src_id, destination_task_id=t.id, relation_type="FS")
+            db.add(rel)
+        db.commit()
     return t
 
 
@@ -181,7 +194,17 @@ def update_scenario_task(task_id: int, payload: TaskUpdate, db: Session = Depend
             for tt in tasks_found:
                 if tt.scenario_id != t.scenario_id:
                     raise HTTPException(status_code=400, detail="Dependency task must belong to the same scenario")
-        t.dependencies = payload.dependencies or []
+        # synchronize Relation rows for this task (destination = t.id)
+        existing_rels = db.query(Relation).filter(Relation.destination_task_id == t.id).all()
+        existing_src_ids = {r.source_task_id for r in existing_rels}
+        # delete removed relations
+        for r in existing_rels:
+            if r.source_task_id not in new_ids:
+                db.delete(r)
+        # create missing relations
+        for src_id in new_ids - existing_src_ids:
+            rel = Relation(source_task_id=src_id, destination_task_id=t.id, relation_type="FS")
+            db.add(rel)
 
     # no per-task overrides field anymore
 

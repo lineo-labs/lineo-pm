@@ -145,9 +145,9 @@ def run_montecarlo(payload: MonteCarloRequest, db: Session = Depends(get_db)):
     # Merge into a local deps dict (do NOT mutate ORM objects if you can avoid it)
     deps_by_id: Dict[int, List[int]] = {}
     for t in tasks:
-        existing = set(t.dependencies or [])
+        # Dependencies are derived from the `relations` table only.
         from_rels = set(rel_map.get(t.id, []))
-        deps_by_id[t.id] = sorted(existing.union(from_rels))
+        deps_by_id[t.id] = sorted(from_rels)
 
     # ---- Topological order (based on FS relations only, fallback to order_index if cycles) ----
     adj = {tid: [] for tid in task_ids}
@@ -255,6 +255,59 @@ def run_montecarlo(payload: MonteCarloRequest, db: Session = Depends(get_db)):
     max_delay = int(delays.max()) if runs else 0
     counts = np.bincount(delays, minlength=max_delay + 1)
     delay_histogram = {str(d): float(counts[d] / runs) for d in range(max_delay + 1)}
+    # ---- Backward pass: compute latest_end per task per run, slack and critical mask ----
+    # Build successors index lists from `adj` (which maps id->list[id])
+    succ_idx: List[np.ndarray] = []
+    for i in range(n_tasks):
+        tid = idx_to_id[i]
+        succs = adj.get(tid, []) or []
+        sidx = [id_to_idx[s] for s in succs if s in id_to_idx]
+        succ_idx.append(np.array(sidx, dtype=np.int32))
+
+    latest_end = np.zeros((n_tasks, runs), dtype=np.int32)
+    project_end_arr = project_end.astype(np.int32)
+
+    # reverse topological order
+    for ti in reversed(topo_idx):
+        # `ti` may be a numpy scalar; cast to int for list indexing
+        ti_int = int(ti)
+        sidx = succ_idx[ti_int]
+        if sidx.size == 0:
+            latest_end[ti_int, :] = project_end_arr
+        else:
+            # candidate latest end is min over successors of (succ_latest_end - succ_dur)
+            cand = (latest_end[sidx, :] - dur[sidx, :]).min(axis=0)
+            latest_end[ti_int, :] = cand
+
+    # slack per task per run and critical mask
+    slack = latest_end - ends
+    critical_mask = slack == 0  # shape (n_tasks, runs)
+
+    # critical index: fraction of runs where task is critical
+    critical_counts = critical_mask.sum(axis=1).astype(np.int32)
+    critical_index = {str(idx_to_id[i]): float(critical_counts[i] / runs) for i in range(n_tasks)}
+
+    # critical path: most frequent set of critical tasks observed across runs
+    # represent each run's critical set as a comma-joined string of task ids in topo order
+    path_counts: Dict[str, int] = {}
+    # iterate runs and build keys
+    for r in range(runs):
+        mask_r = critical_mask[:, r]
+        if not mask_r.any():
+            key = ""
+        else:
+            ids_in_order = [str(idx_to_id[int(i)]) for i in topo_idx if mask_r[int(i)]]
+            key = ",".join(ids_in_order)
+        path_counts[key] = path_counts.get(key, 0) + 1
+
+    # select most common key with deterministic tie-break (lexicographically smallest)
+    if path_counts:
+        max_count = max(path_counts.values())
+        candidates = [k for k, v in path_counts.items() if v == max_count]
+        chosen = min(candidates)
+        critical_path = [] if chosen == "" else [int(x) for x in chosen.split(",")]
+    else:
+        critical_path = []
 
     return {
         "runs": runs,
@@ -270,4 +323,6 @@ def run_montecarlo(payload: MonteCarloRequest, db: Session = Depends(get_db)):
         # keys as task_id strings (JSON-friendly)
         "per_task_slip_probability": per_task_probs,
         "delay_histogram": delay_histogram,
+        "critical_index": critical_index,
+        "critical_path": critical_path,
     }
