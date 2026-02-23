@@ -10,10 +10,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.db.database import SessionLocal, init_db
 from src.routers import api_router
 from src.seed import (
-	ensure_default_project,
-	ensure_sample_milestones,
-	ensure_sample_tasks,
-	ensure_sample_updates,
+    ensure_default_project,
+    ensure_sample_milestones,
+    ensure_sample_tasks,
+    ensure_default_scenario,
+    ensure_sample_updates,
 )
 
 
@@ -50,7 +51,9 @@ def on_startup():
     db = SessionLocal()
     try:
         project = ensure_default_project(db)
-        tasks = ensure_sample_tasks(db, project.id)
+        # ensure a baseline scenario exists for this project then seed tasks under it
+        baseline = ensure_default_scenario(db, project)
+        tasks = ensure_sample_tasks(db, baseline.id)
         ensure_sample_updates(db, project.id, tasks)
         ensure_sample_milestones(db, project.id)
     finally:

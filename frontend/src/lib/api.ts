@@ -12,7 +12,7 @@ interface ProjectDto {
 
 interface TaskDto {
   id: number;
-  project_id: number;
+  scenario_id: number;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -46,16 +46,16 @@ const toProject = (dto: ProjectDto): Project => ({
   endDate: dto.end_date,
 });
 
-const toTask = (dto: TaskDto): Task => ({
+const toTask = (dto: any): Task => ({
   id: dto.id,
-  projectId: dto.project_id,
+  scenarioId: dto.scenario_id ?? dto.project_id,
   title: dto.title,
   description: dto.description ?? undefined,
   status: dto.status,
-  startDate: dto.start_date,
-  endDate: dto.end_date,
-  dependencies: dto.dependencies,
-  orderIndex: dto.order_index,
+  startDate: dto.start_date ?? dto.startDate,
+  endDate: dto.end_date ?? dto.endDate,
+  dependencies: dto.dependencies ?? [],
+  orderIndex: dto.order_index ?? dto.orderIndex,
 });
 
 const toUpdate = (dto: UpdateDto): ProjectUpdate => ({
@@ -117,14 +117,27 @@ export const createProject = async (payload: {
   return toProject(data);
 };
 
-export const fetchTasks = async (projectId: number) => {
-  const response = await fetch(`${API_BASE}/tasks?project_id=${projectId}`);
-  const data = await handleResponse<TaskDto[]>(response);
-  return data.map(toTask);
+export const fetchTasks = async (scenarioId: number) => {
+  // fetch tasks for a scenario (baseline) - uses scenario tasks endpoint
+  const data = await fetchScenarioTasks(scenarioId);
+  // fetchScenarioTasks already maps to scenario task shape; convert to Task
+  return data.map((st) => toTask({
+    id: st.id,
+    scenario_id: st.scenarioId,
+    task_id: st.taskId ?? null,
+    title: st.title,
+    description: st.description ?? null,
+    status: st.status,
+    start_date: st.startDate,
+    end_date: st.endDate,
+    dependencies: st.dependencies ?? [],
+    order_index: st.orderIndex ?? 0,
+  } as any));
 };
 
-export const exportTasksCsv = async (projectId: number) => {
-  const response = await fetch(`${API_BASE}/tasks/export?project_id=${projectId}`);
+export const exportTasksCsv = async (scenarioId: number) => {
+  // attempt scenario-scoped export; fallback to task export query param
+  const response = await fetch(`${API_BASE}/tasks/export?scenario_id=${scenarioId}`);
   if (!response.ok) {
     const message = await response.text();
     throw new Error(message || `HTTP ${response.status}`);
@@ -137,70 +150,84 @@ export const exportTasksCsv = async (projectId: number) => {
   return { blob, filename };
 };
 
-export const getAllTasks = async (projectId?: number) => {
-  const url = projectId ? `${API_BASE}/tasks?project_id=${projectId}` : `${API_BASE}/tasks`;
+export const getAllTasks = async (scenarioId?: number) => {
+  if (scenarioId) {
+    return fetchTasks(scenarioId);
+  }
+  const url = `${API_BASE}/tasks`;
   const response = await fetch(url);
   const data = await handleResponse<TaskDto[]>(response);
   return data.map(toTask);
 };
 
 export const createTask = async (payload: {
-  projectId: number;
+  scenarioId: number;
   title: string;
   description?: string;
   status: TaskStatus;
   startDate: string;
   endDate: string;
 }) => {
-  const response = await fetch(`${API_BASE}/tasks`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      project_id: payload.projectId,
-      title: payload.title,
-      description: payload.description,
-      status: payload.status,
-      start_date: payload.startDate,
-      end_date: payload.endDate,
-      dependencies: [],
-    }),
+  // create a scenario task via scenario endpoints
+  const created = await createScenarioTask(payload.scenarioId, {
+    taskId: null,
+    title: payload.title,
+    description: payload.description ?? null,
+    status: payload.status,
+    startDate: payload.startDate,
+    endDate: payload.endDate,
+    orderIndex: 0,
+    dependencies: [],
   });
-  const data = await handleResponse<TaskDto>(response);
-  return toTask(data);
+  return toTask({
+    id: created.id,
+    scenario_id: created.scenarioId,
+    task_id: created.taskId ?? null,
+    title: created.title,
+    description: created.description ?? null,
+    status: created.status,
+    start_date: created.startDate,
+    end_date: created.endDate,
+    dependencies: created.dependencies ?? [],
+    order_index: created.orderIndex ?? 0,
+  } as any);
 };
 
 export const updateTask = async (
   taskId: number,
   payload: Partial<{
-    projectId: number;
     title: string;
     description?: string;
     status: TaskStatus;
     startDate: string;
     endDate: string;
-    dependencies: number[];
+    dependencies: number[] | null;
+    taskId: number | null;
   }>
 ) => {
-  const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      project_id: payload.projectId,
-      title: payload.title,
-      description: payload.description,
-      status: payload.status,
-      start_date: payload.startDate,
-      end_date: payload.endDate,
-      dependencies: payload.dependencies,
-    }),
-  });
-  // backend returns a list of updated tasks (propagations included)
-  const data = await handleResponse<TaskDto[]>(response);
-  return data.map(toTask);
+  // update scenario task
+  const updated = await updateScenarioTask(taskId, {
+    title: payload.title,
+    description: payload.description ?? null,
+    status: payload.status,
+    startDate: payload.startDate,
+    endDate: payload.endDate,
+    orderIndex: payload.orderIndex ?? undefined,
+    dependencies: payload.dependencies ?? undefined,
+    taskId: payload.taskId ?? undefined,
+  } as any);
+  return [toTask({
+    id: updated.id,
+    scenario_id: updated.scenarioId,
+    task_id: updated.taskId ?? null,
+    title: updated.title,
+    description: updated.description ?? null,
+    status: updated.status,
+    start_date: updated.startDate,
+    end_date: updated.endDate,
+    dependencies: updated.dependencies ?? [],
+    order_index: updated.orderIndex ?? 0,
+  } as any)];
 };
 
 export const fetchPossibleDependencies = async (
@@ -238,25 +265,23 @@ export const fetchRelations = async (projectId?: number) => {
   return data;
 };
 
-export const reorderTasks = async (orderedIds: number[]) => {
-  const response = await fetch(`${API_BASE}/tasks/reorder`, {
+export const reorderTasks = async (orderedIds: number[], scenarioId?: number) => {
+  // prefer scenario-scoped reorder when scenarioId is provided
+  const url = scenarioId ? `${API_BASE}/scenarios/tasks/reorder` : `${API_BASE}/tasks/reorder`;
+  const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      ordered_ids: orderedIds,
-    }),
+    body: JSON.stringify({ ordered_ids: orderedIds, scenario_id: scenarioId ?? undefined }),
   });
-  const data = await handleResponse<TaskDto[]>(response);
+  const data = await handleResponse<any[]>(response);
   return data.map(toTask);
 };
 
 export const deleteTask = async (taskId: number) => {
-  const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
-    method: "DELETE",
-  });
-  await handleVoidResponse(response);
+  // delete scenario task
+  await deleteScenarioTask(taskId);
 };
 
 export const updateProject = async (
@@ -352,7 +377,7 @@ export const fetchUpdates = async (projectId: number) => {
 
 // --- Monte Carlo simulation ---
 interface MonteCarloRequestDto {
-  project_id: number;
+  scenario_id: number;
   runs?: number;
   risk_overrides?: Record<number, string> | null;
 }
@@ -367,12 +392,12 @@ interface MonteCarloResultDto {
 }
 
 export const runMonteCarlo = async (payload: {
-  projectId: number;
+  scenarioId: number;
   runs?: number;
   riskOverrides?: Record<number, string> | null;
 }) => {
   const body: MonteCarloRequestDto = {
-    project_id: payload.projectId,
+    scenario_id: payload.scenarioId,
     runs: payload.runs,
     risk_overrides: payload.riskOverrides ?? null,
   };
@@ -425,7 +450,6 @@ interface ScenarioTaskDto {
   start_date: string;
   end_date: string;
   dependencies: number[];
-  overrides: Record<string, any> | null;
   order_index: number;
 }
 
@@ -434,8 +458,16 @@ const toScenario = (dto: ScenarioDto) => ({
   projectId: dto.project_id,
   name: dto.name,
   description: dto.description ?? undefined,
+  isBaseline: (dto as any).is_baseline === true,
   createdAt: dto.created_at,
 });
+
+export const promoteScenarioToBaseline = async (scenarioId: number) => {
+  const response = await fetch(`${API_BASE}/scenarios/${scenarioId}/promote`, {
+    method: "POST",
+  });
+  await handleVoidResponse(response);
+};
 
 const toScenarioTask = (dto: ScenarioTaskDto) => ({
   id: dto.id,
@@ -447,7 +479,6 @@ const toScenarioTask = (dto: ScenarioTaskDto) => ({
   startDate: dto.start_date,
   endDate: dto.end_date,
   dependencies: dto.dependencies,
-  overrides: dto.overrides ?? undefined,
   orderIndex: dto.order_index,
 });
 
@@ -471,6 +502,8 @@ export const fetchScenarios = async (projectId?: number) => {
 export const fetchScenarioTasks = async (scenarioId: number) => {
   const response = await fetch(`${API_BASE}/scenarios/${scenarioId}/tasks`);
   const data = await handleResponse<ScenarioTaskDto[]>(response);
+  // map scenario-task DTO to the frontend `Task` shape, using `baselineId` to
+  // preserve an optional reference to the baseline task when present.
   return data.map(toScenarioTask);
 };
 
@@ -485,7 +518,6 @@ export const createScenarioTask = async (
     endDate: string;
     orderIndex: number;
     dependencies?: number[];
-    overrides?: Record<string, any> | null;
   }
 ) => {
   const response = await fetch(`${API_BASE}/scenarios/${scenarioId}/tasks`, {
@@ -500,7 +532,6 @@ export const createScenarioTask = async (
       end_date: payload.endDate,
       order_index: payload.orderIndex,
       dependencies: payload.dependencies ?? [],
-      overrides: payload.overrides ?? null,
     }),
   });
   const data = await handleResponse<ScenarioTaskDto>(response);
@@ -517,7 +548,6 @@ export const updateScenarioTask = async (
     endDate: string;
     orderIndex: number;
     dependencies: number[] | null;
-    overrides: Record<string, any> | null;
     taskId: number | null;
   }>
 ) => {
@@ -532,7 +562,6 @@ export const updateScenarioTask = async (
       end_date: payload.endDate,
       order_index: payload.orderIndex,
       dependencies: payload.dependencies ?? undefined,
-      overrides: payload.overrides ?? undefined,
       task_id: payload.taskId ?? undefined,
     }),
   });

@@ -32,38 +32,5 @@ class ScenarioOut(ScenarioBase):
         from_attributes = True
 
 
-class ScenarioTaskBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
-    status: str = Field("todo", pattern="^(todo|in_progress|done)$")
-    start_date: date
-    end_date: date
-    order_index: int = 0
-    dependencies: List[int] = Field(default_factory=list)
-    overrides: Optional[dict] = None
-    task_id: Optional[int] = None
-
-
-class ScenarioTaskCreate(ScenarioTaskBase):
-    pass
-
-
-class ScenarioTaskUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-    status: Optional[str] = Field(None, pattern="^(todo|in_progress|done)$")
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    order_index: Optional[int] = None
-    dependencies: Optional[List[int]] = None
-    overrides: Optional[dict] = None
-    task_id: Optional[int] = None
-
-
-class ScenarioTaskOut(ScenarioTaskBase):
-    id: int
-    scenario_id: int
-    task_id: Optional[int]
-
-    class Config:
-        from_attributes = True
+# scenario-tasks have been unified into `Task` model. Use Task schemas
+# from `src.schemas.task` for scenario-attached task payloads and responses.

@@ -9,6 +9,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from src.db.models.project import Project
+from src.db.models.scenario import Scenario
 from src.db.models.task import Task
 from src.db.models.update import Update
 from src.db.models.milestone import Milestone
@@ -40,24 +41,34 @@ def ensure_default_project(db: Session) -> Project:
     return project
 
 
-def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
-    """Create a set of sample tasks for a project when none exist.
+def ensure_default_scenario(db: Session, project: Project) -> Scenario:
+    """Ensure there is a baseline scenario for the given project."""
+    sc = db.query(Scenario).filter(Scenario.project_id == project.id, Scenario.is_baseline == True).first()
+    if sc:
+        return sc
 
-    Args:
-        db (Session): Database session used to query/create tasks.
-        project_id (int): The project id to attach the sample tasks to.
+    sc = Scenario(
+        project_id=project.id,
+        name="Baseline",
+        description="Automatically created baseline scenario",
+        is_baseline=True,
+    )
+    db.add(sc)
+    db.commit()
+    db.refresh(sc)
+    return sc
 
-    Returns:
-        list[Task]: Ordered list of tasks for the project.
-    """
-    existing = db.query(Task).count()
+
+def ensure_sample_tasks(db: Session, scenario_id: int) -> list[Task]:
+    """Create a set of sample tasks attached to a scenario when none exist."""
+    existing = db.query(Task.id).count()
     if existing:
         return db.query(Task).order_by(Task.order_index.asc()).all()
 
     today = date.today()
     tasks = [
         Task(
-            project_id=project_id,
+            scenario_id=scenario_id,
             title="Kickoff and scope alignment",
             description="Align on MVP scope, priorities, and success metrics",
             status="done",
@@ -67,7 +78,7 @@ def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
             dependencies=[],
         ),
         Task(
-            project_id=project_id,
+            scenario_id=scenario_id,
             title="Design task list UX",
             description="Define layout, inline editing, and DnD behavior",
             status="done",
@@ -77,7 +88,7 @@ def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
             dependencies=[],
         ),
         Task(
-            project_id=project_id,
+            scenario_id=scenario_id,
             title="Implement backend CRUD",
             description="FastAPI + PostgreSQL CRUD for projects and tasks",
             status="in_progress",
@@ -87,7 +98,7 @@ def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
             dependencies=[],
         ),
         Task(
-            project_id=project_id,
+            scenario_id=scenario_id,
             title="Gantt interactions",
             description="Drag to move and resize tasks with date sync",
             status="todo",
@@ -97,7 +108,7 @@ def ensure_sample_tasks(db: Session, project_id: int) -> list[Task]:
             dependencies=[],
         ),
         Task(
-            project_id=project_id,
+            scenario_id=scenario_id,
             title="Polish UI states",
             description="Empty states, error handling, and loading feedback",
             status="todo",
@@ -123,7 +134,7 @@ def ensure_sample_updates(db: Session, project_id: int, tasks: list[Task]) -> li
     Returns:
         list[Update]: List of updates ordered by creation time (desc).
     """
-    existing = db.query(Update).count()
+    existing = db.query(Update.id).count()
     if existing:
         return db.query(Update).order_by(Update.created_at.desc()).all()
 
@@ -168,7 +179,7 @@ def ensure_sample_milestones(db: Session, project_id: int) -> list[Milestone]:
     Returns:
         list[Milestone]: Ordered list of milestones.
     """
-    existing = db.query(Milestone).count()
+    existing = db.query(Milestone.id).count()
     if existing:
         return db.query(Milestone).order_by(Milestone.target_date.asc()).all()
 

@@ -44,23 +44,45 @@ def generate_crud_routes():
         )
 
         # --- CREATE ---
-        @router.post(f"/{model_name}/create")
-        def create_item(item: schema, db: Session = next(get_db())):
-            obj = model(**item.dict())
-            db.add(obj)
-            db.commit()
-            db.refresh(obj)
-            return obj
+        if model_name == "task":
+            @router.post(f"/scenarios/{{scenario_id}}/{model_name}/create")
+            def create_item(scenario_id: int, item: schema, db: Session = next(get_db())):
+                data = item.dict()
+                # ensure scenario_id from path is applied
+                data["scenario_id"] = scenario_id
+                obj = model(**data)
+                db.add(obj)
+                db.commit()
+                db.refresh(obj)
+                return obj
+        else:
+            @router.post(f"/{model_name}/create")
+            def create_item(item: schema, db: Session = next(get_db())):
+                obj = model(**item.dict())
+                db.add(obj)
+                db.commit()
+                db.refresh(obj)
+                return obj
 
         # --- READ ALL ---
-        @router.get(f"/{model_name}/all")
-        def read_all(db: Session = next(get_db())):
-            return db.query(model).all()
+        if model_name == "task":
+            @router.get(f"/scenarios/{{scenario_id}}/{model_name}/all")
+            def read_all(scenario_id: int, db: Session = next(get_db())):
+                return db.query(model).filter(model.scenario_id == scenario_id).all()
+        else:
+            @router.get(f"/{model_name}/all")
+            def read_all(db: Session = next(get_db())):
+                return db.query(model).all()
 
         # --- READ ONE ---
-        @router.get(f"/{model_name}/{{item_id}}")
-        def read_item(item_id: int, db: Session = next(get_db())):
-            return db.query(model).get(item_id)
+        if model_name == "task":
+            @router.get(f"/scenarios/{{scenario_id}}/{model_name}/{{item_id}}")
+            def read_item(scenario_id: int, item_id: int, db: Session = next(get_db())):
+                return db.query(model).filter(model.id == item_id, model.scenario_id == scenario_id).first()
+        else:
+            @router.get(f"/{model_name}/{{item_id}}")
+            def read_item(item_id: int, db: Session = next(get_db())):
+                return db.query(model).get(item_id)
 
         # --- UPDATE ---
         @router.put(f"/{model_name}/{{item_id}}")
