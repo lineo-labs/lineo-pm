@@ -53,9 +53,8 @@ High-level outputs you can use for planning:
 - **Typical and percentile delays:** median/percentile delay estimates for decision-making
 - **Per-task slip risk:** which tasks contribute most to overall schedule risk
 - **Delay distribution & worst-case estimate:** a distribution of possible delays and a simple worst-case date estimate
-
-Use Monte Carlo when you want a probabilistic view of schedule risk (for example, to decide whether to add contingency, re-sequence work, or target risk mitigation on high-impact tasks).
-
+- **Critical Index & Critical Path:** which tasks are most often on the critical path across simulations
+  
 ---
 
 ## Why lineo?
