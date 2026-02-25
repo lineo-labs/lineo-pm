@@ -30,6 +30,7 @@ import { GanttRelations } from "./GanttRelations";
 import { computeScenarioDeltas } from "./ganttUtils";
 import { createScenario, createScenarioTask, updateScenarioTask, fetchScenarios, fetchScenarioTasks, deleteScenario, promoteScenarioToBaseline } from "../../lib/api";
 import MonteCarloPanel from "../MonteCarloPanel";
+import { Button } from "../ui/Button";
 
 interface GanttLayoutProps {
   projectId?: number;
@@ -475,58 +476,39 @@ export const GanttLayout = ({
         </div>
         <div className="relative flex items-center gap-3">
           <div className="text-xs text-slate-500">{displayedTasks.length} tasks</div>
-          <button
-            type="button"
-            onClick={() => setHideDone((s) => !s)}
-            aria-pressed={hideDone}
-            className={`text-xs px-2 py-1 rounded-md border ${hideDone ? 'bg-sky-500 text-white border-sky-600' : 'bg-transparent text-slate-200 border-slate-700'}`}
-          >
-            {hideDone ? 'Show done' : 'Hide done'}
-          </button>
-          <button
-            type="button"
-            aria-pressed={!showRelations}
-            onClick={() => setShowRelations((s) => !s)}
-            className={`text-xs px-2 py-1 rounded-md border ${showRelations ? 'bg-sky-500 text-white border-sky-600' : 'bg-transparent text-slate-200 border-slate-700'}`}
-          >
-            {showRelations ? 'Hide relations' : 'Show relations'}
-          </button>
-          <button
+          <Button type="button" onClick={() => setHideDone((s) => !s)} aria-pressed={hideDone} variant={hideDone ? "success" : "ghost"}>
+            {hideDone ? "Show done" : "Hide done"}
+          </Button>
+          <Button type="button" aria-pressed={!showRelations} onClick={() => setShowRelations((s) => !s)} variant={showRelations ? "primary" : "ghost"}>
+            {showRelations ? "Hide relations" : "Show relations"}
+          </Button>
+          <Button
             type="button"
             onClick={() => {
               if (!scenarioMode) {
-                // enter scenario: clone baseline tasks into temporary scenarioTasks
-                // baseline reference is kept in the scenario-task DTOs from the server
                 setScenarioTasks(tasks.map((t) => ({ ...(t as any) })) as Task[]);
-                // set baselineTasks to the current baseline tasks (the provided `tasks` are baseline)
                 setBaselineTasks(tasks.map((t) => ({ ...t })));
                 setScenarioMode(true);
               } else {
-                // exit scenario and discard
                 setScenarioMode(false);
                 setScenarioTasks(null);
               }
             }}
-            className={`text-xs px-2 py-1 rounded-md border ${scenarioMode ? 'bg-red-600 text-white border-red-700' : 'bg-emerald-500 text-white border-emerald-600'}`}
+            variant={scenarioMode ? "danger" : "success"}
           >
-            {scenarioMode ? 'Exit scenario' : 'New scenario'}
-          </button>
+            {scenarioMode ? "Exit scenario" : "New scenario"}
+          </Button>
           {scenarioMode && (
-            <button
-              type="button"
-              onClick={() => createScenarioTaskLocal()}
-              className="text-xs px-2 py-1 rounded-md border bg-sky-500 text-white border-sky-600"
-            >
+            <Button type="button" onClick={() => createScenarioTaskLocal()} variant="primary">
               New task
-            </button>
+            </Button>
           )}
-          
+
           <div>
-            <button
+            <Button
               type="button"
               onClick={async () => {
-                // always fetch latest scenarios when opening menu
-                  const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
+                const projectId = typeof projectIdProp !== "undefined" ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
                 try {
                   setShowLoadMenu((s) => !s);
                   const list = await fetchScenarios(projectId);
@@ -537,10 +519,10 @@ export const GanttLayout = ({
                   console.error(err);
                 }
               }}
-              className="text-xs px-2 py-1 rounded-md border bg-indigo-600 text-white border-indigo-700"
+              variant="primary"
             >
               Load scenario
-            </button>
+            </Button>
             {showLoadMenu && (
               <div className="absolute right-0 mt-2 p-3 rounded-md bg-slate-800 border border-slate-700 z-40 origin-top-right">
                 <div className="mb-2 text-sm text-slate-300">Choose scenario</div>
@@ -552,9 +534,7 @@ export const GanttLayout = ({
                       onClick={async () => {
                         try {
                           const tasksForScenario = await fetchScenarioTasks(s.id);
-                          // tasksForScenario includes `taskId` in the raw object (not on the `Task` type)
                           setScenarioTasks(tasksForScenario as Task[]);
-                          // if UI needs baseline tasks for comparison, fetch the project's baseline scenario
                           try {
                             const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
                             if (projectId) {
@@ -562,9 +542,6 @@ export const GanttLayout = ({
                               const baseline = scenarios.find((s: any) => (s as any).isBaseline === true) ?? scenarios[0];
                               if (baseline) {
                                 const baselineDtos = await fetchScenarioTasks(baseline.id);
-                                // baselineDtos are scenario-task DTOs; when present use the linked
-                                // `taskId` (the original baseline task id) so we can match
-                                // scenario tasks to their baseline counterparts correctly.
                                 setBaselineTasks(
                                   baselineDtos.map((st) => ({
                                     id: (st as any).taskId ?? st.id,
@@ -596,66 +573,66 @@ export const GanttLayout = ({
                       }}
                     >
                       <div className="flex-1">{s.name}</div>
-                      <button
-                        type="button"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const confirmed = confirm(`Delete scenario "${s.name}"?`);
-                          if (!confirmed) return;
-                          try {
-                            const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
-                            await deleteScenario(s.id);
-                            const list = await fetchScenarios(projectId);
-                            const mappedList = list.map((ss) => ({ id: ss.id, name: ss.name }));
-                            setAvailableScenarios(mappedList);
-                            if (mappedList.length > 0) setSelectedScenarioId(mappedList[0].id);
-                            else setSelectedScenarioId(null);
-                            if (scenarioMode && selectedScenarioId === s.id) {
-                              setScenarioMode(false);
-                              setScenarioTasks(null);
+                      <div className="flex items-center">
+                        <Button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const confirmed = confirm(`Delete scenario "${s.name}"?`);
+                            if (!confirmed) return;
+                            try {
+                              const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
+                              await deleteScenario(s.id);
+                              const list = await fetchScenarios(projectId);
+                              const mappedList = list.map((ss) => ({ id: ss.id, name: ss.name }));
+                              setAvailableScenarios(mappedList);
+                              if (mappedList.length > 0) setSelectedScenarioId(mappedList[0].id);
+                              else setSelectedScenarioId(null);
+                              if (scenarioMode && selectedScenarioId === s.id) {
+                                setScenarioMode(false);
+                                setScenarioTasks(null);
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              alert(`Failed to delete scenario: ${String(err)}`);
                             }
-                          } catch (err) {
-                            console.error(err);
-                            alert(`Failed to delete scenario: ${String(err)}`);
-                          }
-                        }}
-                        className="ml-2 text-xs px-2 py-1 rounded-md border bg-transparent text-red-400 border-red-600"
-                      >
-                        Delete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const confirmed = confirm(`Promote scenario "${s.name}" to baseline?`);
-                          if (!confirmed) return;
-                          try {
-                            const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
-                            await promoteScenarioToBaseline(s.id);
-                            const list = await fetchScenarios(projectId);
-                            const mappedList = list.map((ss) => ({ id: ss.id, name: ss.name }));
-                            setAvailableScenarios(mappedList);
-                            alert("Scenario promoted to baseline");
-                          } catch (err) {
-                            console.error(err);
-                            alert(`Failed to promote scenario: ${String(err)}`);
-                          }
-                        }}
-                        className="ml-2 text-xs px-2 py-1 rounded-md border bg-transparent text-amber-300 border-amber-600"
-                      >
-                        Promote
-                      </button>
+                          }}
+                          variant="ghost"
+                          className="ml-2 text-red-400 border-red-600"
+                        >
+                          Delete
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const confirmed = confirm(`Promote scenario "${s.name}" to baseline?`);
+                            if (!confirmed) return;
+                            try {
+                              const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
+                              await promoteScenarioToBaseline(s.id);
+                              const list = await fetchScenarios(projectId);
+                              const mappedList = list.map((ss) => ({ id: ss.id, name: ss.name }));
+                              setAvailableScenarios(mappedList);
+                              alert("Scenario promoted to baseline");
+                            } catch (err) {
+                              console.error(err);
+                              alert(`Failed to promote scenario: ${String(err)}`);
+                            }
+                          }}
+                          variant="ghost"
+                          className="ml-2 text-amber-300 border-amber-600"
+                        >
+                          Promote
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowLoadMenu(false)}
-                    className="text-xs px-2 py-1 rounded-md border bg-transparent text-slate-200 border-slate-700"
-                  >
+                  <Button type="button" onClick={() => setShowLoadMenu(false)} variant="ghost">
                     Close
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -664,16 +641,16 @@ export const GanttLayout = ({
           {scenarioMode && (
             <div className="ml-2">
               {!showSaveName ? (
-                <button
+                <Button
                   type="button"
                   onClick={() => {
                     setShowSaveName(true);
                     setSaveName(`Scenario ${new Date().toISOString().slice(0, 19)}`);
                   }}
-                  className="text-xs px-2 py-1 rounded-md border bg-sky-500 text-white border-sky-600"
+                  variant="primary"
                 >
                   Save scenario
-                </button>
+                </Button>
               ) : (
                 <div className="flex items-center gap-2">
                   <input
@@ -681,7 +658,7 @@ export const GanttLayout = ({
                     onChange={(e) => setSaveName(e.target.value)}
                     className="text-sm p-1 rounded-md bg-slate-900 border border-slate-700"
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={async () => {
                       if (!saveName || !scenarioTasks) return;
@@ -733,17 +710,13 @@ export const GanttLayout = ({
                         setSavingScenario(false);
                       }
                     }}
-                    className="text-xs px-2 py-1 rounded-md border bg-emerald-500 text-white border-emerald-600"
+                    variant="success"
                   >
                     Confirm
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSaveName(false)}
-                    className="text-xs px-2 py-1 rounded-md border bg-transparent text-slate-200 border-slate-700"
-                  >
+                  </Button>
+                  <Button type="button" onClick={() => setShowSaveName(false)} variant="ghost">
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

@@ -1,4 +1,5 @@
 import type { Task } from "../../lib/types";
+import { Button } from "../ui/Button";
 
 interface GanttTaskListProps {
   tasks: Task[];
@@ -40,24 +41,21 @@ export const GanttTaskList = ({
             <div className="flex items-center gap-1">
               {task.description && (
                 <div className="relative group">
-                  <button
+                  <Button
                     type="button"
-                    className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-800 text-[10px] text-slate-300"
+                    variant="ghost"
+                    className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-800 text-[10px] text-slate-300 p-0"
                   >
                     i
-                  </button>
+                  </Button>
                   <div className="pointer-events-none absolute right-0 top-full mt-2 w-48 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] text-slate-200 opacity-0 shadow-lg transition group-hover:opacity-100">
                     {task.description}
                   </div>
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => onEditTask(task)}
-                className="rounded-md border border-slate-800 px-2 py-1 text-[10px] text-slate-300"
-              >
+              <Button type="button" onClick={() => onEditTask(task)} variant="ghost" className="rounded-md border border-slate-800 px-2 py-1 text-[10px] text-slate-300">
                 Edit
-              </button>
+              </Button>
             </div>
           </div>
         ))}
