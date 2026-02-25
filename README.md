@@ -156,8 +156,7 @@ Backend OpenAPI docs:
 
 * [x] Baseline drafting and comparison
 * [x] Monte Carlo simulation with risk analysis
-* [ ] Risk heatmaps
-* [ ] Critical path analysis
+* [ ] Risk adjusted scenarios
 * [ ] Cross-project Gantt view
 * [ ] User authentication & permissions
 * [ ] Optional AI Assistant (Jarvis-style) for:
