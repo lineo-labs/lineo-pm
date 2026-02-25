@@ -1,52 +1,95 @@
+
 @import "react-day-picker/dist/style.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens and small utilities for visual polish */
 :root {
   color-scheme: dark;
+
+  /* Palette (indigo / violet accent) */
+  --accent: 99, 102, 241; /* rgb(99 102 241) */
+  --accent-400: 124 58 237; /* indigo / violet mix */
+  --accent-500: 99 102 241;
+  --accent-600: 79 70 229;
+  --bg-900: #07060a;
+  --bg-850: #0b1220;
+  --card-bg: rgba(15, 23, 42, 0.45);
 }
 
+/* Base typography and layout tweaks */
 html,
 body {
   margin: 0;
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
   overflow-x: hidden;
+  background: linear-gradient(180deg, rgba(var(--accent),0.02) 0%, transparent 40%), var(--bg-900);
 }
 
+/* Box sizing */
 * {
   box-sizing: border-box;
 }
 
+/* Focus ring helper for keyboard users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(var(--accent-500), 0.12);
+}
+
+/* Card elevation utilities */
+.card-elev-1 {
+  box-shadow: 0 6px 18px rgba(2,6,23,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
+  border-radius: 14px;
+}
+
+.card-elev-2 {
+  box-shadow: 0 10px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+  border-radius: 16px;
+}
+
+/* Smooth transition utility */
+.transition-base {
+  transition: transform 160ms cubic-bezier(.2,.9,.2,1), box-shadow 160ms ease, background-color 160ms ease, opacity 160ms ease;
+}
+
+/* Accent helpers exposed as CSS variables for inline styles */
+:root {
+  --accent-color: rgba(var(--accent-500), 1);
+  --accent-strong: rgba(var(--accent-600), 1);
+  --accent-soft: rgba(var(--accent-500), 0.14);
+}
+
+/* react-day-picker themed to match palette */
 .rdp-dark {
-  --rdp-accent-color: #6366f1;
-  --rdp-background-color: rgba(99, 102, 241, 0.2);
-  --rdp-outline: 2px solid rgba(99, 102, 241, 0.6);
-  --rdp-outline-selected: 2px solid rgba(99, 102, 241, 0.9);
+  --rdp-accent-color: #7c3aed;
+  --rdp-background-color: rgba(124, 58, 237, 0.16);
+  --rdp-outline: 2px solid rgba(124, 58, 237, 0.6);
+  --rdp-outline-selected: 2px solid rgba(124, 58, 237, 0.95);
   color: #e2e8f0;
 }
-
-.rdp-dark .rdp-day {
-  color: #e2e8f0;
-}
-
+.rdp-dark .rdp-day { color: #e2e8f0; }
 .rdp-dark .rdp-day_selected,
 .rdp-dark .rdp-day_range_start,
 .rdp-dark .rdp-day_range_end {
-  background-color: rgba(99, 102, 241, 0.6);
+  background-color: rgba(124, 58, 237, 0.7);
   color: #0f172a;
 }
-
 .rdp-dark .rdp-day_range_middle {
-  background-color: rgba(99, 102, 241, 0.2);
+  background-color: rgba(124, 58, 237, 0.18);
   color: #e2e8f0;
 }
 
-/* Custom Gantt-like scrollbar for expandable lists and timeline */
+/* Scrollbar polish for timeline / lists */
 .scrollbar-gantt {
   scrollbar-width: thin;
-  scrollbar-color: rgba(99,102,241,0.6) transparent;
+  scrollbar-color: rgba(var(--accent-500), 0.7) transparent;
 }
 
 .scrollbar-gantt::-webkit-scrollbar {
@@ -59,14 +102,37 @@ body {
 }
 
 .scrollbar-gantt::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.6);
+  background: rgba(var(--accent-500), 0.7);
   border-radius: 9999px;
   border: 3px solid transparent;
   background-clip: padding-box;
-  box-shadow: 0 2px 6px rgba(99,102,241,0.18), inset 0 0 0 1px rgba(255,255,255,0.03);
+  box-shadow: 0 2px 8px rgba(2,6,23,0.5), inset 0 0 0 1px rgba(255,255,255,0.03);
 }
 
 .scrollbar-gantt:hover::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.75);
+  background: rgba(var(--accent-600), 0.9);
+}
+
+/* Small utility for subtle separators */
+.sep-faint {
+  border-color: rgba(255,255,255,0.04);
+}
+
+/* Accessibility: ensure interactive elements have visible focus */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(var(--accent-500), 0.12);
+}
+
+/* Keep tailwind classes available for dark theme specifics if needed */
+.bg-accent-500 {
+  background-color: rgba(var(--accent-500), 1);
+}
+.bg-accent-600 {
+  background-color: rgba(var(--accent-600), 1);
 }
 

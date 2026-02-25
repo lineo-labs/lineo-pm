@@ -37,28 +37,41 @@ export const Sidebar = ({
   };
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full flex-col gap-6">
+      <header className="flex flex-col items-center gap-2">
+        <div
+          className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent-600)] to-[var(--accent-400)] shadow-md"
+          aria-hidden="true"
+        >
+          <img src={logo} alt="logo" className="h-10 w-auto" />
+        </div>
+        <p className="mt-1 text-sm font-semibold text-slate-100">Time-centric, easy, fast.</p>
+      </header>
+
       <div>
-        <img
-          src={logo}
-          alt="lineo-pm"
-          className="h-10 w-auto"
+        <CreateProjectButton
+          onClick={() => setShowCreateForm((prev) => !prev)}
         />
-        <p className="mt-1 text-xs text-slate-400">Time-centric, easy, fast.</p>
       </div>
 
-      <CreateProjectButton onClick={() => setShowCreateForm((prev) => !prev)} />
+      {showCreateForm && (
+        <div className="rounded-lg border border-slate-800/40 bg-slate-900/40 p-3 card-elev-1 transition-base">
+          <CreateProjectForm onSubmit={handleCreateProject} />
+        </div>
+      )}
 
-      {showCreateForm && <CreateProjectForm onSubmit={handleCreateProject} />}
+      <nav aria-label="Project list" className="mt-2">
+        <div className="rounded-lg border border-slate-800/30 bg-gradient-to-b from-transparent to-slate-900/20 p-3">
+          <ProjectSelector
+            projects={projects}
+            selectedProjectId={selectedProjectId}
+            onSelectProject={onSelectProject}
+          />
+        </div>
+      </nav>
 
-      <ProjectSelector
-        projects={projects}
-        selectedProjectId={selectedProjectId}
-        onSelectProject={onSelectProject}
-      />
-
-      <div className="mt-auto text-xs text-slate-500">
-        v0.1 • MVP layout
+      <div className="mt-auto">
+        <div className="text-xs text-slate-400">v0.1 • MVP layout</div>
       </div>
     </div>
   );
