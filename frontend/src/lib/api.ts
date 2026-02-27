@@ -18,6 +18,8 @@ interface TaskDto {
   status: TaskStatus;
   start_date: string;
   end_date: string;
+  actual_start?: string | null;
+  actual_end?: string | null;
   dependencies: number[];
   order_index: number;
 }
@@ -54,6 +56,8 @@ const toTask = (dto: any): Task => ({
   status: dto.status,
   startDate: dto.start_date ?? dto.startDate,
   endDate: dto.end_date ?? dto.endDate,
+  actualStart: dto.actual_start ?? dto.actualStart ?? undefined,
+  actualEnd: dto.actual_end ?? dto.actualEnd ?? undefined,
   dependencies: dto.dependencies ?? [],
   orderIndex: dto.order_index ?? dto.orderIndex,
 });
@@ -121,18 +125,22 @@ export const fetchTasks = async (scenarioId: number) => {
   // fetch tasks for a scenario (baseline) - uses scenario tasks endpoint
   const data = await fetchScenarioTasks(scenarioId);
   // fetchScenarioTasks already maps to scenario task shape; convert to Task
-  return data.map((st) => toTask({
-    id: st.id,
-    scenario_id: st.scenarioId,
-    task_id: st.taskId ?? null,
-    title: st.title,
-    description: st.description ?? null,
-    status: st.status,
-    start_date: st.startDate,
-    end_date: st.endDate,
-    dependencies: st.dependencies ?? [],
-    order_index: st.orderIndex ?? 0,
-  } as any));
+  return data.map((st) =>
+    toTask({
+      id: st.id,
+      scenario_id: st.scenarioId,
+      task_id: st.taskId ?? null,
+      title: st.title,
+      description: st.description ?? null,
+      status: st.status,
+      start_date: st.startDate,
+      end_date: st.endDate,
+      actual_start: (st as any).actualStart ?? (st as any).actual_start ?? undefined,
+      actual_end: (st as any).actualEnd ?? (st as any).actual_end ?? undefined,
+      dependencies: st.dependencies ?? [],
+      order_index: st.orderIndex ?? 0,
+    } as any)
+  );
 };
 
 export const exportTasksCsv = async (scenarioId: number) => {
@@ -518,6 +526,8 @@ const toScenarioTask = (dto: ScenarioTaskDto) => ({
   status: dto.status,
   startDate: dto.start_date,
   endDate: dto.end_date,
+  actualStart: (dto as any).actual_start ?? (dto as any).actualStart ?? undefined,
+  actualEnd: (dto as any).actual_end ?? (dto as any).actualEnd ?? undefined,
   dependencies: dto.dependencies,
   orderIndex: dto.order_index,
 });

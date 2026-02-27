@@ -170,13 +170,30 @@ def update_scenario_task(task_id: int, payload: TaskUpdate, db: Session = Depend
     if not t:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    # Preserve previous status to detect transitions
+    prev_status = t.status
     fields_set = payload.model_fields_set
     if "title" in fields_set:
         t.title = payload.title
     if "description" in fields_set:
         t.description = payload.description
     if "status" in fields_set:
-        t.status = payload.status
+        new_status = payload.status
+        t.status = new_status
+        # Auto-manage actual_start/actual_end when the client did not provide explicit values
+        if new_status == "in_progress" and "actual_start" not in fields_set:
+            from datetime import date
+
+            t.actual_start = date.today()
+        if prev_status == "in_progress" and new_status == "done" and "actual_end" not in fields_set:
+            from datetime import date
+
+            t.actual_end = date.today()
+        if new_status == "todo":
+            if "actual_start" not in fields_set:
+                t.actual_start = None
+            if "actual_end" not in fields_set:
+                t.actual_end = None
     if "start_date" in fields_set:
         t.start_date = payload.start_date
     if "end_date" in fields_set:

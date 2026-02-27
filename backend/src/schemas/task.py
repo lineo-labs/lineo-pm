@@ -14,6 +14,10 @@ class TaskBase(BaseModel):
     start_date: date
     end_date: date
     dependencies: List[int] = Field(default_factory=list)
+    actual_start: Optional[date] = None
+    actual_end: Optional[date] = None
+    adjusted_start: Optional[date] = None
+    adjusted_end: Optional[date] = None
 
 
 class TaskCreate(TaskBase):
@@ -30,6 +34,10 @@ class TaskUpdate(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     dependencies: Optional[List[int]] = None
+    actual_start: Optional[date] = None
+    actual_end: Optional[date] = None
+    adjusted_start: Optional[date] = None
+    adjusted_end: Optional[date] = None
 
 
 class TaskOut(TaskBase):

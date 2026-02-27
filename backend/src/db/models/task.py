@@ -40,3 +40,9 @@ class Task(Base):
     scenario_id = Column(Integer, ForeignKey("scenarios.id"), index=True, nullable=False)
     # relationship back to scenario (required)
     scenario = relationship("Scenario", back_populates="tasks")
+
+    # actual and adjusted dates (optional)
+    actual_start = Column(Date, nullable=True)
+    actual_end = Column(Date, nullable=True)
+    adjusted_start = Column(Date, nullable=True)
+    adjusted_end = Column(Date, nullable=True)

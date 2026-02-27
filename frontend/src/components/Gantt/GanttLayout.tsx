@@ -227,6 +227,53 @@ export const GanttLayout = ({
     };
   };
 
+  const getDatePosition = (dateStart: Date, dateEnd: Date) => {
+    if (scale === "week") {
+      const daysFromRangeStartToStart = diffInDays(rangeStart, dateStart);
+      const daysFromRangeStartToEnd = diffInDays(rangeStart, dateEnd);
+      const dayPixel = columnWidth / 7;
+      const offset = daysFromRangeStartToStart * dayPixel;
+      const width = (daysFromRangeStartToEnd - daysFromRangeStartToStart + 1) * dayPixel;
+      return { offset, width };
+    }
+
+    if (scale === "month") {
+      const startMonthIndex = diffInMonths(rangeStart, startOfMonth(dateStart));
+      const endMonthIndex = diffInMonths(rangeStart, startOfMonth(dateEnd));
+
+      const startMonthDate = startOfMonth(dateStart);
+      const daysInStartMonth = endOfMonth(startMonthDate).getUTCDate();
+      const dayOfStart = dateStart.getUTCDate();
+      const offset = startMonthIndex * columnWidth + ((dayOfStart - 1) / daysInStartMonth) * columnWidth;
+
+      let width = 0;
+      if (startMonthIndex === endMonthIndex) {
+        const daysInThisMonth = daysInStartMonth;
+        const dayOfEnd = dateEnd.getUTCDate();
+        width = ((dayOfEnd - dayOfStart + 1) / daysInThisMonth) * columnWidth;
+      } else {
+        const daysRemainingInStart = daysInStartMonth - (dayOfStart - 1);
+        width += (daysRemainingInStart / daysInStartMonth) * columnWidth;
+        for (let mi = startMonthIndex + 1; mi < endMonthIndex; mi += 1) {
+          width += columnWidth;
+        }
+        const endMonthDate = startOfMonth(dateEnd);
+        const daysInEndMonth = endOfMonth(endMonthDate).getUTCDate();
+        const dayOfEnd = dateEnd.getUTCDate();
+        width += (dayOfEnd / daysInEndMonth) * columnWidth;
+      }
+
+      return { offset, width };
+    }
+
+    const startIndex = diffInDays(rangeStart, dateStart);
+    const endIndex = diffInDays(rangeStart, dateEnd);
+    return {
+      offset: startIndex * columnWidth,
+      width: (endIndex - startIndex + 1) * columnWidth,
+    };
+  };
+
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
 
   const scenarioTaskMap = useMemo(() => {
@@ -297,7 +344,38 @@ export const GanttLayout = ({
 
   // Relations are always visible now; removed toggle state
 
-  const positions = useMemo(() => displayedTasks.map((t) => ({ id: t.id, ...getTaskPosition(t) })), [displayedTasks, columnWidth, scale, rangeStart]);
+  const positions = useMemo(() =>
+    displayedTasks.map((t) => {
+      const base = { id: t.id, ...getTaskPosition(t) } as any;
+      // compute optional actuals if present
+      try {
+        if ((t as any).actualStart) {
+          const aStart = parseISODate((t as any).actualStart);
+          if (!isNaN(aStart.getTime())) {
+            if ((t as any).actualEnd) {
+              const aEnd = parseISODate((t as any).actualEnd);
+              if (!isNaN(aEnd.getTime())) {
+                const pos = getDatePosition(aStart, aEnd);
+                base.actualOffset = pos.offset;
+                base.actualWidth = pos.width;
+              } else {
+                const pos = getDatePosition(aStart, aStart);
+                base.actualOffset = pos.offset;
+                base.actualWidth = undefined;
+              }
+            } else {
+              const pos = getDatePosition(aStart, aStart);
+              base.actualOffset = pos.offset;
+              base.actualWidth = undefined;
+            }
+          }
+        }
+      } catch (e) {
+        // ignore parsing errors
+      }
+      return base;
+    })
+  , [displayedTasks, columnWidth, scale, rangeStart]);
 
   // Local handlers that modify only the temporary scenarioTasks state
   const localOnAdjustTaskDates = (taskId: number, mode: "start" | "end", deltaDays: number) => {

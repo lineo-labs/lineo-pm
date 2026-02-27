@@ -19,6 +19,8 @@ interface GanttRowProps {
   position: {
     offset: number;
     width: number;
+    actualOffset?: number | null;
+    actualWidth?: number | null;
   };
   columnWidth: number;
   scale: DateScale;
@@ -296,6 +298,17 @@ export const GanttRow = ({
     return undefined;
   })();
 
+  // compute actual overlay position relative to the visual bar
+  let actualOffsetRel: number | undefined = undefined;
+  let actualWidthRel: number | undefined = undefined;
+  if ((position as any).actualOffset !== undefined && (position as any).actualOffset !== null) {
+    // position.offset is the absolute offset used for the bar; visualOffset includes dragOffset
+    actualOffsetRel = (position as any).actualOffset - position.offset + (visualOffset - position.offset);
+    if ((position as any).actualWidth !== undefined && (position as any).actualWidth !== null) {
+      actualWidthRel = (position as any).actualWidth;
+    }
+  }
+
   return (
     <div
       className="relative"
@@ -310,6 +323,8 @@ export const GanttRow = ({
         title={task.title}
         offset={visualOffset}
         width={visualWidth}
+        actualOffset={typeof actualOffsetRel === "number" ? actualOffsetRel : undefined}
+        actualWidth={actualWidthRel}
         isDragging={dragging}
         isRowDragging={isRowDragging}
         onBarPointerDown={handleMovePointerDown}

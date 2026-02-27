@@ -10,6 +10,7 @@ import io
 import csv
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from datetime import date
 
 from src.db.database import get_db
 from src.db.models.task import Task
@@ -137,6 +138,8 @@ def update_task(scenario_id: int, task_id: int, payload: TaskUpdate, db: Session
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    # remember previous status to detect transitions
+    prev_status = task.status
     fields_set = payload.model_fields_set
     if "title" in fields_set:
         task.title = payload.title
@@ -147,9 +150,36 @@ def update_task(scenario_id: int, task_id: int, payload: TaskUpdate, db: Session
     if "description" in fields_set:
         task.description = payload.description
     if "status" in fields_set:
-        task.status = payload.status
+        new_status = payload.status
+        task.status = new_status
+        # If the client explicitly provided actual_start/actual_end, respect it
+        # otherwise apply automatic transitions based on status change.
+        # When entering in_progress, set actual_start to today if not provided.
+        if new_status == "in_progress" and "actual_start" not in fields_set:
+            task.actual_start = date.today()
+        # When moving from in_progress -> done, set actual_end to today if not provided.
+        if prev_status == "in_progress" and new_status == "done" and "actual_end" not in fields_set:
+            task.actual_end = date.today()
+        if prev_status == "done" and new_status == "in_progress":
+            # allow reverting done -> in_progress: clear actual_end if client did not provide an explicit value
+            if "actual_end" not in fields_set:
+                task.actual_end = None
+        # When reverting to todo, clear actual start/end (unless client provided values)
+        if new_status == "todo":
+            if "actual_start" not in fields_set:
+                task.actual_start = None
+            if "actual_end" not in fields_set:
+                task.actual_end = None
     if "start_date" in fields_set:
         task.start_date = payload.start_date
+    if "actual_start" in fields_set:
+        task.actual_start = payload.actual_start
+    if "actual_end" in fields_set:
+        task.actual_end = payload.actual_end
+    if "adjusted_start" in fields_set:
+        task.adjusted_start = payload.adjusted_start
+    if "adjusted_end" in fields_set:
+        task.adjusted_end = payload.adjusted_end
     if "end_date" in fields_set:
         task.end_date = payload.end_date
     if "dependencies" in fields_set:

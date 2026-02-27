@@ -24,6 +24,8 @@ export interface Task {
   status: TaskStatus;
   startDate: string;
   endDate: string;
+  actualStart?: string;
+  actualEnd?: string;
   dependencies: number[];
   orderIndex?: number;
 }

@@ -4,6 +4,8 @@ interface GanttBarProps {
   title: string;
   offset: number;
   width: number;
+  actualOffset?: number | null;
+  actualWidth?: number | null;
   isDragging: boolean;
   isRowDragging: boolean;
   onBarPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
@@ -19,6 +21,8 @@ export const GanttBar = ({
   title,
   offset,
   width,
+  actualOffset,
+  actualWidth,
   isDragging,
   isRowDragging,
   onBarPointerDown,
@@ -56,6 +60,28 @@ export const GanttBar = ({
       }
       onPointerDown={interactive ? onBarPointerDown : undefined}
     >
+            {/* Actuals: thin line overlay */}
+            {typeof actualOffset === "number" && actualOffset !== null && (
+              <div
+                aria-hidden
+                className="absolute top-1 left-0 h-1"
+                style={
+                  actualWidth && typeof actualWidth === "number"
+                    ? {
+                        left: actualOffset,
+                        width: actualWidth,
+                        background: "linear-gradient(90deg, rgba(34,197,94,0.95) 0%, rgba(34,197,94,0.95) 100%)",
+                        zIndex: 5,
+                      }
+                    : {
+                        left: actualOffset,
+                        width: Math.max(2, 60),
+                        background: "linear-gradient(90deg, rgba(34,197,94,0.95) 0%, rgba(34,197,94,0.0) 100%)",
+                        zIndex: 5,
+                      }
+                }
+              />
+            )}
       {interactive ? (
         <>
           <div
