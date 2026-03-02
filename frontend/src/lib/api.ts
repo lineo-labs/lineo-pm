@@ -557,6 +557,15 @@ export const fetchScenarioTasks = async (scenarioId: number) => {
   return data.map(toScenarioTask);
 };
 
+export const createRiskAdjustedScenario = async (sourceScenarioId: number, payload: { targetP: number; runs?: number; name?: string }) => {
+  const response = await fetch(`${API_BASE}/scenarios/${sourceScenarioId}/risk_adjust`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target_p: payload.targetP, runs: payload.runs, name: payload.name }),
+  });
+  return handleResponse<any>(response);
+};
+
 export const createScenarioTask = async (
   scenarioId: number,
   payload: {

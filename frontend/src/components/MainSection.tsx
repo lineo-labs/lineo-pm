@@ -53,6 +53,8 @@ interface MainSectionProps {
   }) => Promise<void> | void;
   loading: boolean;
   error: string | null;
+  selectedScenarioId?: number | null;
+  onSelectScenario?: (id: number | null) => void;
 }
 
 export const MainSection = ({
@@ -74,11 +76,16 @@ export const MainSection = ({
   onUpdateProject,
   loading,
   error,
+  selectedScenarioId,
+  onSelectScenario,
 }: MainSectionProps) => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
   const [isProjectEditing, setIsProjectEditing] = useState(false);
   const [displayedTasksCount, setDisplayedTasksCount] = useState<number | null>(null);
+  
+
+  
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -112,6 +119,8 @@ export const MainSection = ({
         />
       </div>
 
+      {/* risk-adjust controls moved into GanttLayout (rendered below the Gantt) */}
+
       <GanttLayout
         projectId={project?.id}
         tasks={tasks}
@@ -122,6 +131,8 @@ export const MainSection = ({
         onReorderTasks={onReorderTasks}
         onMoveMilestone={onMoveMilestone}
         onDisplayedTasksCount={setDisplayedTasksCount}
+        selectedScenarioId={selectedScenarioId}
+        onSelectScenario={onSelectScenario}
       />
 
       <TaskEditDialog
