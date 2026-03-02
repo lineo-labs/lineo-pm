@@ -85,7 +85,7 @@ export const GanttLayout = ({
   const [baselineTasks, setBaselineTasks] = useState<Task[] | null>(null);
   const [savingScenario, setSavingScenario] = useState(false);
   const [showLoadMenu, setShowLoadMenu] = useState(false);
-  const [availableScenarios, setAvailableScenarios] = useState<{ id: number; name: string }[] | null>(null);
+  const [availableScenarios, setAvailableScenarios] = useState<{ id: number; name: string; isBaseline?: boolean }[] | null>(null);
   const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
   const [showSaveName, setShowSaveName] = useState(false);
   const [saveName, setSaveName] = useState("");
@@ -106,9 +106,9 @@ export const GanttLayout = ({
       const res = await createRiskAdjustedScenario(sourceId, { targetP: riskTarget, runs: 100000 });
       const newId = res?.new_scenario_id ?? res?.newScenarioId ?? null;
       if (newId) {
-        // update local and notify parent
-        setSelectedScenarioId(newId);
+        // notify parent first, then update local to maintain sync
         if (typeof onSelectScenario === "function") onSelectScenario(newId);
+        setSelectedScenarioId(newId);
       }
       // Store full result with task shift details and original Monte Carlo
       if (res?.task_details && res?.original_montecarlo) {
@@ -125,6 +125,24 @@ export const GanttLayout = ({
   
 
   
+
+  // Reset local scenario state when project changes to ensure baseline is loaded
+  useEffect(() => {
+    if (projectIdProp) {
+      setSelectedScenarioId(null);
+      setScenarioMode(false);
+      setScenarioTasks(null);
+      setAvailableScenarios(null);
+      setShowLoadMenu(false);
+    }
+  }, [projectIdProp]);
+
+  // Sync local scenario state with parent when parent changes
+  useEffect(() => {
+    if (propSelectedScenarioId !== undefined && propSelectedScenarioId !== selectedScenarioId) {
+      setSelectedScenarioId(propSelectedScenarioId);
+    }
+  }, [propSelectedScenarioId]);
 
   useEffect(() => {
     const element = timelineRef.current;
@@ -582,11 +600,25 @@ export const GanttLayout = ({
 
   const draggingIndex = draggingTaskId !== null ? displayedTasks.findIndex((t) => t.id === draggingTaskId) : null;
 
+  // Determine if currently viewing baseline scenario
+  const isViewingBaseline = useMemo(() => {
+    if (!availableScenarios || !propSelectedScenarioId) return false;
+    const currentScenario = availableScenarios.find(s => s.id === propSelectedScenarioId);
+    return currentScenario?.isBaseline === true;
+  }, [availableScenarios, propSelectedScenarioId]);
+
   return (
     <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-100">Gantt</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-slate-100">Gantt</h2>
+            {isViewingBaseline && (
+              <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">
+                Baseline
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-500">
             Scale: {scale === "month" ? "Months" : scale === "week" ? "Weeks" : "Days"}
           </p>
@@ -629,9 +661,13 @@ export const GanttLayout = ({
                 try {
                   setShowLoadMenu((s) => !s);
                   const list = await fetchScenarios(projectId);
-                  const mapped = list.map((s) => ({ id: s.id, name: s.name }));
+                  const mapped = list.map((s) => ({ 
+                    id: s.id, 
+                    name: s.name, 
+                    isBaseline: (s as any).isBaseline === true 
+                  }));
                   setAvailableScenarios(mapped);
-                  if (mapped.length > 0) setSelectedScenarioId(mapped[0].id);
+                  // Don't auto-select when loading scenarios list - let parent control selection
                 } catch (err) {
                   console.error(err);
                 }
@@ -681,6 +717,8 @@ export const GanttLayout = ({
                             setBaselineTasks(null);
                           }
                           setScenarioMode(true);
+                          // notify parent first, then update local to maintain sync
+                          if (typeof onSelectScenario === "function") onSelectScenario(s.id);
                           setSelectedScenarioId(s.id);
                           setShowLoadMenu(false);
                         } catch (err) {
@@ -689,7 +727,14 @@ export const GanttLayout = ({
                         }
                       }}
                     >
-                      <div className="flex-1">{s.name}</div>
+                      <div className="flex-1 flex items-center gap-2">
+                        <span>{s.name}</span>
+                        {s.isBaseline && (
+                          <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">
+                            Baseline
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center">
                         <Button
                           type="button"
@@ -701,10 +746,19 @@ export const GanttLayout = ({
                               const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
                               await deleteScenario(s.id);
                               const list = await fetchScenarios(projectId);
-                              const mappedList = list.map((ss) => ({ id: ss.id, name: ss.name }));
+                              const mappedList = list.map((ss) => ({ 
+                                id: ss.id, 
+                                name: ss.name, 
+                                isBaseline: (ss as any).isBaseline === true 
+                              }));
                               setAvailableScenarios(mappedList);
-                              if (mappedList.length > 0) setSelectedScenarioId(mappedList[0].id);
-                              else setSelectedScenarioId(null);
+                              
+                              // If we deleted the currently selected scenario, reset to null and let parent handle baseline selection
+                              if (selectedScenarioId === s.id) {
+                                if (typeof onSelectScenario === "function") onSelectScenario(null);
+                                setSelectedScenarioId(null);
+                              }
+                              
                               if (scenarioMode && selectedScenarioId === s.id) {
                                 setScenarioMode(false);
                                 setScenarioTasks(null);
@@ -729,8 +783,17 @@ export const GanttLayout = ({
                               const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
                               await promoteScenarioToBaseline(s.id);
                               const list = await fetchScenarios(projectId);
-                              const mappedList = list.map((ss) => ({ id: ss.id, name: ss.name }));
+                              const mappedList = list.map((ss) => ({ 
+                                id: ss.id, 
+                                name: ss.name, 
+                                isBaseline: (ss as any).isBaseline === true 
+                              }));
                               setAvailableScenarios(mappedList);
+                              
+                              // Notify parent that this scenario is now baseline
+                              if (typeof onSelectScenario === "function") onSelectScenario(s.id);
+                              setSelectedScenarioId(s.id);
+                              
                               alert("Scenario promoted to baseline");
                             } catch (err) {
                               console.error(err);

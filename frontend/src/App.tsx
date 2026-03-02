@@ -35,6 +35,11 @@ export const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Clear scenario selection when project changes to force baseline loading
+  useEffect(() => {
+    setSelectedScenarioId(null);
+  }, [selectedProjectId]);
+
   useEffect(() => {
     let active = true;
     setIsLoading(true);
@@ -127,8 +132,16 @@ export const App = () => {
         // if no selected scenario, try to fetch scenarios and pick baseline
         try {
           const scenarios = await fetchScenarios(selectedProjectId);
+          if (scenarios.length === 0) {
+            if (!active) return;
+            setTasks([]);
+            setError("No scenarios found for project");
+            return;
+          }
+          
+          // Find baseline scenario or fallback to first scenario
           const baseline = scenarios.find((s: any) => (s as any).isBaseline === true) ?? scenarios[0];
-            if (baseline) {
+          if (baseline) {
             setSelectedScenarioId(baseline.id);
             const t = await fetchScenarioTasks(baseline.id);
             if (!active) return;
@@ -142,14 +155,16 @@ export const App = () => {
               endDate: st.endDate,
               dependencies: st.dependencies ?? [],
               orderIndex: st.orderIndex,
-                
             })));
           } else {
+            if (!active) return;
             setTasks([]);
+            setError("No valid scenarios found for project");
           }
         } catch (err) {
           if (!active) return;
-          setError(err instanceof Error ? err.message : "API error");
+          setError(err instanceof Error ? err.message : "Failed to load baseline scenario");
+          setTasks([]);
         }
         return;
       }

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.db.database import get_db
 from src.db.models.project import Project
+from src.db.models.scenario import Scenario
 from src.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate
 
 router = APIRouter(tags=["project"])
@@ -37,6 +38,16 @@ def create_project(payload: ProjectCreate, db: Session = Depends(get_db)):
     db.add(project)
     db.commit()
     db.refresh(project)
+    # Auto-create a baseline Scenario for the new project
+    baseline = Scenario(
+        project_id=project.id,
+        name=f"Baseline - {project.name}",
+        description="Auto-created baseline scenario",
+        is_baseline=True,
+    )
+    db.add(baseline)
+    db.commit()
+    db.refresh(baseline)
     return project
     """Create a new project from the provided payload.
 
