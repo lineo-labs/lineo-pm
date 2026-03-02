@@ -28,8 +28,9 @@ import { GanttTaskList } from "./GanttTaskList";
 import { TaskEditDialog } from "../TaskEditDialog";
 import { GanttRelations } from "./GanttRelations";
 import { computeScenarioDeltas } from "./ganttUtils";
-import { createScenario, createScenarioTask, updateScenarioTask, fetchScenarios, fetchScenarioTasks, deleteScenario, promoteScenarioToBaseline } from "../../lib/api";
+import { createScenario, createScenarioTask, updateScenarioTask, fetchScenarios, fetchScenarioTasks, deleteScenario, promoteScenarioToBaseline, createRiskAdjustedScenario } from "../../lib/api";
 import MonteCarloPanel from "../MonteCarloPanel";
+import { RiskAdjustResultPanel, type RiskAdjustResult } from "../RiskAdjustResultPanel";
 import { Button } from "../ui/Button";
 
 interface GanttLayoutProps {
@@ -42,6 +43,9 @@ interface GanttLayoutProps {
   onReorderTasks: (orderedIds: number[]) => void;
   onMoveMilestone: (milestoneId: number, deltaDays: number) => void;
   onDisplayedTasksCount?: (count: number) => void;
+  // optional scenario selection wiring from parent
+  selectedScenarioId?: number | null;
+  onSelectScenario?: (id: number | null) => void;
 }
 
 const ROW_HEIGHT = 44;
@@ -60,6 +64,8 @@ export const GanttLayout = ({
   onReorderTasks,
   onMoveMilestone,
   onDisplayedTasksCount,
+  selectedScenarioId: propSelectedScenarioId,
+  onSelectScenario,
 }: GanttLayoutProps) => {
   const [hideDone, setHideDone] = useState(false);
   const [showRelations, setShowRelations] = useState(false);
@@ -84,6 +90,39 @@ export const GanttLayout = ({
   const [showSaveName, setShowSaveName] = useState(false);
   const [saveName, setSaveName] = useState("");
   const tempIdRef = useRef<number>(-1);
+  const [riskTarget, setRiskTarget] = useState<number>(90);
+  const [isAdjusting, setIsAdjusting] = useState(false);
+  const [showRiskMenu, setShowRiskMenu] = useState(false);
+  const [riskAdjustResult, setRiskAdjustResult] = useState<RiskAdjustResult | null>(null);
+
+  const handleCreateRiskAdjusted = async () => {
+    const sourceId = propSelectedScenarioId ?? selectedScenarioId ?? tasks[0]?.scenarioId ?? null;
+    if (!sourceId) {
+      alert("No source scenario selected");
+      return;
+    }
+    setIsAdjusting(true);
+    try {
+      const res = await createRiskAdjustedScenario(sourceId, { targetP: riskTarget, runs: 100000 });
+      const newId = res?.new_scenario_id ?? res?.newScenarioId ?? null;
+      if (newId) {
+        // update local and notify parent
+        setSelectedScenarioId(newId);
+        if (typeof onSelectScenario === "function") onSelectScenario(newId);
+      }
+      // Store full result with task shift details and original Monte Carlo
+      if (res?.task_details && res?.original_montecarlo) {
+        setRiskAdjustResult(res as RiskAdjustResult);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message || "Failed to create risk-adjusted scenario");
+    } finally {
+      setIsAdjusting(false);
+      setShowRiskMenu(false);
+    }
+  };
+  
 
   
 
@@ -960,6 +999,59 @@ export const GanttLayout = ({
           )}
         </div>
       </div>
+
+      {/* Risk-adjust controls: placed under Gantt, before MonteCarlo panel */}
+      <div className="mt-3 grid grid-cols-[300px_1fr] gap-0">
+        <div className="px-4 col-span-2">
+          <div className="max-w-full">
+            <div className="flex items-center gap-3 rounded-md border border-slate-900 bg-slate-900/30 p-3">
+              <div className="text-sm text-slate-300">Create risk-adjusted scenario</div>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowRiskMenu((s) => !s)}
+                  className="flex items-center gap-2 rounded-full bg-slate-800/60 px-3 py-1 text-sm font-medium text-slate-100 hover:bg-slate-700"
+                >
+                  <span>{`P${riskTarget}`}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9l6 6 6-6" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                {showRiskMenu && (
+                  <div className="absolute mt-2 w-36 rounded-md border border-slate-800 bg-slate-800 z-40">
+                    <button className={`w-full text-left px-3 py-2 ${riskTarget === 80 ? 'bg-slate-700' : 'hover:bg-slate-700'}`} onClick={() => { setRiskTarget(80); setShowRiskMenu(false); }}>P80</button>
+                    <button className={`w-full text-left px-3 py-2 ${riskTarget === 90 ? 'bg-slate-700' : 'hover:bg-slate-700'}`} onClick={() => { setRiskTarget(90); setShowRiskMenu(false); }}>P90</button>
+                    <button className={`w-full text-left px-3 py-2 ${riskTarget === 99 ? 'bg-slate-700' : 'hover:bg-slate-700'}`} onClick={() => { setRiskTarget(99); setShowRiskMenu(false); }}>P99</button>
+                  </div>
+                )}
+              </div>
+              <div className="ml-2">
+                <button
+                  type="button"
+                  onClick={handleCreateRiskAdjusted}
+                  disabled={isAdjusting}
+                  className="rounded-md bg-amber-500 px-3 py-1 text-sm font-semibold text-slate-900 disabled:opacity-60"
+                >
+                  {isAdjusting ? 'Running...' : 'Create'}
+                </button>
+              </div>
+              <div className="ml-auto text-xs text-slate-400">Source: {propSelectedScenarioId ?? selectedScenarioId ?? tasks[0]?.scenarioId ?? 'none'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Risk-adjust result panel: task shift reasons + original Monte Carlo */}
+      {riskAdjustResult && (
+        <div className="mt-3 grid grid-cols-[300px_1fr] gap-0">
+          <div className="px-4 col-span-2">
+            <RiskAdjustResultPanel
+              result={riskAdjustResult}
+              onClose={() => setRiskAdjustResult(null)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Monte Carlo panel rendered in its own container, aligned with the left task list */}
       <div className="mt-3 grid grid-cols-[300px_1fr] gap-0">

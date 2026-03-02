@@ -598,6 +598,8 @@ export const App = () => {
           onUpdateProject={handleUpdateProject}
           loading={isLoading}
           error={error}
+          selectedScenarioId={selectedScenarioId}
+          onSelectScenario={setSelectedScenarioId}
         />
       }
     />
