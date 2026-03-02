@@ -1035,7 +1035,7 @@ export const GanttLayout = ({
                   {isAdjusting ? 'Running...' : 'Create'}
                 </button>
               </div>
-              <div className="ml-auto text-xs text-slate-400">Source: {propSelectedScenarioId ?? selectedScenarioId ?? tasks[0]?.scenarioId ?? 'none'}</div>
+              <div className="ml-auto text-xs text-slate-400">Source: baseline scenario</div>
             </div>
           </div>
         </div>

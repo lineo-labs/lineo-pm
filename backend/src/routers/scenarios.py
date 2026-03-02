@@ -249,6 +249,9 @@ class RiskAdjustRequest(BaseModel):
 def create_risk_adjusted_scenario(scenario_id: int, payload: RiskAdjustRequest, db: Session = Depends(get_db)):
     """Create a new scenario with risk-adjusted dates based on Monte Carlo.
 
+    The simulation always runs on the active baseline scenario
+    (``is_baseline=True``) of the project that *scenario_id* belongs to.
+
     Algorithm implemented server-side follows the requested steps:
     - run MC and compute P_target of project finish
     - compute buffer B = P_target - baseline_finish (days)
@@ -263,7 +266,25 @@ def create_risk_adjusted_scenario(scenario_id: int, payload: RiskAdjustRequest, 
     if payload.target_p not in (80, 90, 99):
         raise HTTPException(status_code=400, detail="target_p must be one of 80,90,99")
 
-    # run first Monte Carlo on the source scenario
+    # ── Always resolve to the baseline scenario of the project ──────────
+    ref_scenario = db.query(Scenario).filter(Scenario.id == scenario_id).first()
+    if not ref_scenario:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+
+    baseline = (
+        db.query(Scenario)
+        .filter(Scenario.project_id == ref_scenario.project_id, Scenario.is_baseline == True)  # noqa: E712
+        .first()
+    )
+    if not baseline:
+        raise HTTPException(
+            status_code=404,
+            detail="No active baseline scenario found for this project",
+        )
+    # use the baseline scenario id from this point on
+    scenario_id = baseline.id
+
+    # run first Monte Carlo on the baseline scenario
     sim = _simulate_scenario(scenario_id, payload.runs, None, db)
 
     runs = int(sim["runs"])
@@ -330,10 +351,8 @@ def create_risk_adjusted_scenario(scenario_id: int, payload: RiskAdjustRequest, 
         starts[ti_int] = earliest
         ends[ti_int] = earliest + int(d_star_int[ti_int])
 
-    # create new scenario and tasks
-    src_scenario = db.query(Scenario).filter(Scenario.id == scenario_id).first()
-    if not src_scenario:
-        raise HTTPException(status_code=404, detail="Source scenario not found")
+    # create new scenario and tasks – source is the baseline resolved above
+    src_scenario = baseline
 
     name = payload.name or f"Risk-adjusted P{payload.target_p} of {src_scenario.name}"
     new_s = Scenario(project_id=src_scenario.project_id, name=name, description=f"Auto-generated risk adjusted (P{payload.target_p})")
