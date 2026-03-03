@@ -29,6 +29,8 @@ interface CrossProjectGanttProps {
 
 const ROW_HEIGHT = 44;
 const HEADER_HEIGHT = 38;
+const NAME_COLUMN_WIDTH = 200;
+const MIN_COLUMN_WIDTH = 20;
 
 export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGanttProps) => {
   const timelineRef = useRef<HTMLDivElement | null>(null);
@@ -94,14 +96,26 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
       : formatDayLabel(col)
   );
 
+  const adjustedColumnWidth = useMemo(() => {
+    if (timelineWidth <= 0 || columns.length === 0) return columnWidth;
+    const rawTotal = columns.length * columnWidth;
+    const scaleFactor = timelineWidth / rawTotal;
+    if (scaleFactor >= 1) return columnWidth;
+    const adjusted = Math.max(MIN_COLUMN_WIDTH, Math.floor(columnWidth * scaleFactor));
+    return adjusted;
+  }, [timelineWidth, columns.length, columnWidth]);
+
+  const totalTimelineWidth = columns.length * adjustedColumnWidth;
+
   const getProjectPosition = (project: Project) => {
+    const effectiveColumnWidth = adjustedColumnWidth;
     const pStart = parseISODate(project.startDate);
     const pEnd = parseISODate(project.endDate);
 
     if (scale === "week") {
       const daysToStart = diffInDays(rangeStart, pStart);
       const daysToEnd = diffInDays(rangeStart, pEnd);
-      const dayPixel = columnWidth / 7;
+      const dayPixel = effectiveColumnWidth / 7;
       return { offset: daysToStart * dayPixel, width: (daysToEnd - daysToStart + 1) * dayPixel };
     }
 
@@ -112,22 +126,22 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
       const daysInStartMonth = endOfMonth(startMonthDate).getUTCDate();
       const dayOfStart = pStart.getUTCDate();
       const offset =
-        startMonthIndex * columnWidth + ((dayOfStart - 1) / daysInStartMonth) * columnWidth;
+        startMonthIndex * effectiveColumnWidth + ((dayOfStart - 1) / daysInStartMonth) * effectiveColumnWidth;
 
       let width = 0;
       if (startMonthIndex === endMonthIndex) {
         const dayOfEnd = pEnd.getUTCDate();
-        width = ((dayOfEnd - dayOfStart + 1) / daysInStartMonth) * columnWidth;
+        width = ((dayOfEnd - dayOfStart + 1) / daysInStartMonth) * effectiveColumnWidth;
       } else {
         const daysRemainingInStart = daysInStartMonth - (dayOfStart - 1);
-        width += (daysRemainingInStart / daysInStartMonth) * columnWidth;
+        width += (daysRemainingInStart / daysInStartMonth) * effectiveColumnWidth;
         for (let mi = startMonthIndex + 1; mi < endMonthIndex; mi++) {
-          width += columnWidth;
+          width += effectiveColumnWidth;
         }
         const endMonthDate = startOfMonth(pEnd);
         const daysInEndMonth = endOfMonth(endMonthDate).getUTCDate();
         const dayOfEnd = pEnd.getUTCDate();
-        width += (dayOfEnd / daysInEndMonth) * columnWidth;
+        width += (dayOfEnd / daysInEndMonth) * effectiveColumnWidth;
       }
       return { offset, width };
     }
@@ -135,7 +149,7 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
     // day scale
     const startIndex = diffInDays(rangeStart, pStart);
     const endIndex = diffInDays(rangeStart, pEnd);
-    return { offset: startIndex * columnWidth, width: (endIndex - startIndex + 1) * columnWidth };
+    return { offset: startIndex * effectiveColumnWidth, width: (endIndex - startIndex + 1) * effectiveColumnWidth };
   };
 
   if (projects.length === 0) {
@@ -159,9 +173,9 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
         <div className="text-xs text-slate-500">{projects.length} projects</div>
       </div>
 
-      <div className="relative grid grid-cols-[240px_1fr] gap-0">
+      <div className="relative grid grid-cols-[200px_1fr] gap-0">
         {/* Left: Project names */}
-        <div className="border-r border-slate-900">
+        <div className="border-r border-slate-900" style={{ width: NAME_COLUMN_WIDTH }}>
           <div
             className="sticky top-0 z-10 flex items-center border-b border-slate-900 bg-slate-950 px-3 text-xs font-medium text-slate-400"
             style={{ height: HEADER_HEIGHT }}
@@ -184,13 +198,13 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
         {/* Right: Timeline */}
         <div
           ref={timelineRef}
-          className="relative overflow-visible rounded-r-xl border border-slate-900 bg-slate-950"
+          className={`relative ${totalTimelineWidth <= timelineWidth ? "overflow-hidden" : "overflow-auto"} rounded-r-xl border border-slate-900 bg-slate-950`}
         >
-          <div className="overflow-hidden">
-            <GanttHeader labels={headerLabels} columnWidth={columnWidth} height={HEADER_HEIGHT} />
+          <div style={{ width: totalTimelineWidth }}>
+            <GanttHeader labels={headerLabels} columnWidth={adjustedColumnWidth} height={HEADER_HEIGHT} />
             <GanttGrid
               columns={columns.length}
-              columnWidth={columnWidth}
+              columnWidth={adjustedColumnWidth}
               rowCount={projects.length}
               rowHeight={ROW_HEIGHT}
               headerHeight={HEADER_HEIGHT}
