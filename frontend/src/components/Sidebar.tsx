@@ -9,7 +9,7 @@ import logo from "../assets/logo.png";
 interface SidebarProps {
   projects: Project[];
   selectedProjectId: number | null;
-  onSelectProject: (projectId: number) => void;
+  onSelectProject: (projectId: number | null) => void;
   onCreateProject: (payload: {
     name: string;
     description?: string;

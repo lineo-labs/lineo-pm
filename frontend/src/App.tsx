@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "./components/AppShell";
+import { CrossProjectGantt } from "./components/CrossProjectGantt";
 import { MainSection } from "./components/MainSection";
 import { Sidebar } from "./components/Sidebar";
 import {
@@ -49,7 +50,7 @@ export const App = () => {
           return;
         }
         setProjects(data);
-        setSelectedProjectId(data[0]?.id ?? null);
+        setSelectedProjectId(null);
         setError(null);
       })
       .catch((err) => {
@@ -594,28 +595,35 @@ export const App = () => {
         />
       }
       main={
-        <MainSection
-          project={selectedProject}
-          tasks={sortedTasks}
-          updates={updates}
-          onCreateTask={handleCreateTask}
-          onCreateUpdate={handleCreateUpdate}
-          onCreateMilestone={handleCreateMilestone}
-          onUpdateMilestone={handleUpdateMilestone}
-          onDeleteMilestone={handleDeleteMilestone}
-          onUpdateTask={handleUpdateTask}
-          onDeleteTask={handleDeleteTask}
-          onAdjustTaskDates={handleAdjustTaskDates}
-          onMoveTaskDates={handleMoveTaskDates}
-          onReorderTasks={handleReorderTasks}
-          milestones={milestones}
-          onMoveMilestone={handleMoveMilestone}
-          onUpdateProject={handleUpdateProject}
-          loading={isLoading}
-          error={error}
-          selectedScenarioId={selectedScenarioId}
-          onSelectScenario={setSelectedScenarioId}
-        />
+        selectedProjectId ? (
+          <MainSection
+            project={selectedProject}
+            tasks={sortedTasks}
+            updates={updates}
+            onCreateTask={handleCreateTask}
+            onCreateUpdate={handleCreateUpdate}
+            onCreateMilestone={handleCreateMilestone}
+            onUpdateMilestone={handleUpdateMilestone}
+            onDeleteMilestone={handleDeleteMilestone}
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={handleDeleteTask}
+            onAdjustTaskDates={handleAdjustTaskDates}
+            onMoveTaskDates={handleMoveTaskDates}
+            onReorderTasks={handleReorderTasks}
+            milestones={milestones}
+            onMoveMilestone={handleMoveMilestone}
+            onUpdateProject={handleUpdateProject}
+            loading={isLoading}
+            error={error}
+            selectedScenarioId={selectedScenarioId}
+            onSelectScenario={setSelectedScenarioId}
+          />
+        ) : (
+          <CrossProjectGantt
+            projects={projects}
+            onSelectProject={setSelectedProjectId}
+          />
+        )
       }
     />
   );
