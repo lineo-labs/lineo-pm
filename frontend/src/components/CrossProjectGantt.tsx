@@ -30,11 +30,10 @@ interface CrossProjectGanttProps {
 const ROW_HEIGHT = 44;
 const HEADER_HEIGHT = 38;
 const NAME_COLUMN_WIDTH = 200;
-const MIN_COLUMN_WIDTH = 20;
-
 export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGanttProps) => {
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const [timelineWidth, setTimelineWidth] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     const element = timelineRef.current;
@@ -96,19 +95,8 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
       : formatDayLabel(col)
   );
 
-  const adjustedColumnWidth = useMemo(() => {
-    if (timelineWidth <= 0 || columns.length === 0) return columnWidth;
-    const rawTotal = columns.length * columnWidth;
-    const scaleFactor = timelineWidth / rawTotal;
-    if (scaleFactor >= 1) return columnWidth;
-    const adjusted = Math.max(MIN_COLUMN_WIDTH, Math.floor(columnWidth * scaleFactor));
-    return adjusted;
-  }, [timelineWidth, columns.length, columnWidth]);
-
-  const totalTimelineWidth = columns.length * adjustedColumnWidth;
-
   const getProjectPosition = (project: Project) => {
-    const effectiveColumnWidth = adjustedColumnWidth;
+    const effectiveColumnWidth = columnWidth;
     const pStart = parseISODate(project.startDate);
     const pEnd = parseISODate(project.endDate);
 
@@ -155,8 +143,23 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
   if (projects.length === 0) {
     return (
       <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
-        <h2 className="text-lg font-semibold text-slate-100">Projects Overview</h2>
-        <p className="mt-4 text-sm text-slate-400">No projects yet. Create one from the sidebar.</p>
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 text-left"
+          onClick={() => setCollapsed((c) => !c)}
+        >
+          <svg
+            className={`h-4 w-4 text-slate-400 transition-transform ${collapsed ? "-rotate-90" : ""}`}
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+          </svg>
+          <h2 className="text-lg font-semibold text-slate-100">Projects Overview</h2>
+        </button>
+        {!collapsed && (
+          <p className="mt-4 text-sm text-slate-400">No projects yet. Create one from the sidebar.</p>
+        )}
       </section>
     );
   }
@@ -164,15 +167,29 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
   return (
     <section className="rounded-2xl border border-slate-900 bg-slate-950/70 p-6">
       <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-100">Projects Overview</h2>
-          <p className="text-xs text-slate-500">
-            Scale: {scale === "month" ? "Months" : scale === "week" ? "Weeks" : "Days"}
-          </p>
-        </div>
+        <button
+          type="button"
+          className="flex items-center gap-2 text-left"
+          onClick={() => setCollapsed((c) => !c)}
+        >
+          <svg
+            className={`h-4 w-4 text-slate-400 transition-transform ${collapsed ? "-rotate-90" : ""}`}
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+          </svg>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-100">Projects Overview</h2>
+            <p className="text-xs text-slate-500">
+              Scale: {scale === "month" ? "Months" : scale === "week" ? "Weeks" : "Days"}
+            </p>
+          </div>
+        </button>
         <div className="text-xs text-slate-500">{projects.length} projects</div>
       </div>
 
+      {collapsed ? null : (
       <div className="relative grid grid-cols-[200px_1fr] gap-0">
         {/* Left: Project names */}
         <div className="border-r border-slate-900" style={{ width: NAME_COLUMN_WIDTH }}>
@@ -198,13 +215,13 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
         {/* Right: Timeline */}
         <div
           ref={timelineRef}
-          className={`relative ${totalTimelineWidth <= timelineWidth ? "overflow-hidden" : "overflow-auto"} rounded-r-xl border border-slate-900 bg-slate-950`}
+          className="relative overflow-visible rounded-r-xl border border-slate-900 bg-slate-950"
         >
-          <div style={{ width: totalTimelineWidth }}>
-            <GanttHeader labels={headerLabels} columnWidth={adjustedColumnWidth} height={HEADER_HEIGHT} />
+          <div className="overflow-hidden">
+            <GanttHeader labels={headerLabels} columnWidth={columnWidth} height={HEADER_HEIGHT} />
             <GanttGrid
               columns={columns.length}
-              columnWidth={adjustedColumnWidth}
+              columnWidth={columnWidth}
               rowCount={projects.length}
               rowHeight={ROW_HEIGHT}
               headerHeight={HEADER_HEIGHT}
@@ -239,6 +256,7 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
           </div>
         </div>
       </div>
+      )}
     </section>
   );
 };

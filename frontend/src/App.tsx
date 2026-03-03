@@ -595,35 +595,36 @@ export const App = () => {
         />
       }
       main={
-        selectedProjectId ? (
-          <MainSection
-            project={selectedProject}
-            tasks={sortedTasks}
-            updates={updates}
-            onCreateTask={handleCreateTask}
-            onCreateUpdate={handleCreateUpdate}
-            onCreateMilestone={handleCreateMilestone}
-            onUpdateMilestone={handleUpdateMilestone}
-            onDeleteMilestone={handleDeleteMilestone}
-            onUpdateTask={handleUpdateTask}
-            onDeleteTask={handleDeleteTask}
-            onAdjustTaskDates={handleAdjustTaskDates}
-            onMoveTaskDates={handleMoveTaskDates}
-            onReorderTasks={handleReorderTasks}
-            milestones={milestones}
-            onMoveMilestone={handleMoveMilestone}
-            onUpdateProject={handleUpdateProject}
-            loading={isLoading}
-            error={error}
-            selectedScenarioId={selectedScenarioId}
-            onSelectScenario={setSelectedScenarioId}
-          />
-        ) : (
+        <div className="flex flex-col gap-6">
           <CrossProjectGantt
             projects={projects}
             onSelectProject={setSelectedProjectId}
           />
-        )
+          {selectedProjectId && (
+            <MainSection
+              project={selectedProject}
+              tasks={sortedTasks}
+              updates={updates}
+              onCreateTask={handleCreateTask}
+              onCreateUpdate={handleCreateUpdate}
+              onCreateMilestone={handleCreateMilestone}
+              onUpdateMilestone={handleUpdateMilestone}
+              onDeleteMilestone={handleDeleteMilestone}
+              onUpdateTask={handleUpdateTask}
+              onDeleteTask={handleDeleteTask}
+              onAdjustTaskDates={handleAdjustTaskDates}
+              onMoveTaskDates={handleMoveTaskDates}
+              onReorderTasks={handleReorderTasks}
+              milestones={milestones}
+              onMoveMilestone={handleMoveMilestone}
+              onUpdateProject={handleUpdateProject}
+              loading={isLoading}
+              error={error}
+              selectedScenarioId={selectedScenarioId}
+              onSelectScenario={setSelectedScenarioId}
+            />
+          )}
+        </div>
       }
     />
   );
