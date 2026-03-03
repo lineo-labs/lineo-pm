@@ -95,6 +95,8 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
       : formatDayLabel(col)
   );
 
+  const totalTimelineWidth = columns.length * columnWidth;
+
   const getProjectPosition = (project: Project) => {
     const effectiveColumnWidth = columnWidth;
     const pStart = parseISODate(project.startDate);
@@ -215,9 +217,9 @@ export const CrossProjectGantt = ({ projects, onSelectProject }: CrossProjectGan
         {/* Right: Timeline */}
         <div
           ref={timelineRef}
-          className="relative overflow-visible rounded-r-xl border border-slate-900 bg-slate-950"
+          className="relative overflow-x-auto rounded-r-xl border border-slate-900 bg-slate-950"
         >
-          <div className="overflow-hidden">
+          <div style={{ width: totalTimelineWidth }}>
             <GanttHeader labels={headerLabels} columnWidth={columnWidth} height={HEADER_HEIGHT} />
             <GanttGrid
               columns={columns.length}
