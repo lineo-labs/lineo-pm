@@ -5,7 +5,7 @@ import type { Project } from "../lib/types";
 interface ProjectSelectorProps {
   projects: Project[];
   selectedProjectId: number | null;
-  onSelectProject: (projectId: number) => void;
+  onSelectProject: (projectId: number | null) => void;
 }
 
 export const ProjectSelector = ({
@@ -59,6 +59,19 @@ export const ProjectSelector = ({
             className="w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none"
           />
           <ul className="mt-2 max-h-56 overflow-y-auto scrollbar-gantt">
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectProject(null);
+                  setOpen(false);
+                }}
+                className="w-full rounded-md px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-slate-900"
+              >
+                <div className="font-medium text-cyan-400">All projects</div>
+                <div className="text-xs text-slate-500">Cross-project overview</div>
+              </button>
+            </li>
             {filteredProjects.map((project) => (
               <li key={project.id}>
                 <button
