@@ -1,0 +1,22 @@
+{
+  "name": "lineo-pm-docs",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Documentation for Lineo PM - Project Management System with React Frontend and Python Backend",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "^15.0.0",
+    "nextra": "^3.0.0",
+    "nextra-theme-docs": "^3.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "25.3.3",
+    "typescript": "^5.5.3"
+  }
+}

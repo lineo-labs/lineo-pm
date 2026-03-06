@@ -15,6 +15,10 @@ from src.seed import (
     ensure_sample_tasks,
     ensure_default_scenario,
     ensure_sample_updates,
+    ensure_second_project,
+    ensure_second_project_tasks,
+    ensure_second_project_updates,
+    ensure_second_project_milestones,
 )
 
 
@@ -50,11 +54,18 @@ def on_startup():
     init_db()
     db = SessionLocal()
     try:
+        # First project: lineo-pm
         project = ensure_default_project(db)
-        # ensure a baseline scenario exists for this project then seed tasks under it
         baseline = ensure_default_scenario(db, project)
         tasks = ensure_sample_tasks(db, baseline.id)
         ensure_sample_updates(db, project.id, tasks)
         ensure_sample_milestones(db, project.id)
+        
+        # Second project: Mobile App Launch
+        project2 = ensure_second_project(db)
+        baseline2 = ensure_default_scenario(db, project2)
+        tasks2 = ensure_second_project_tasks(db, baseline2.id)
+        ensure_second_project_updates(db, project2.id, tasks2)
+        ensure_second_project_milestones(db, project2.id)
     finally:
         db.close()
