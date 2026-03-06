@@ -1,0 +1,62 @@
+---
+title: Quick Start
+---
+
+# Quick Start
+
+This guide assumes you have already completed the [Installation](/getting-started/installation) step and have the Lineo-PM stack running locally. Open the frontend at [http://localhost:5173](http://localhost:5173) to follow along.
+
+## 1. Create Your First Project
+
+On the home screen, click the **Create Project** button in the top bar.
+
+Fill in the project details:
+
+- **Name** — a descriptive name (e.g., "Product v2 Launch")
+- **Start date** — the planned start of the project
+- **End date** — the target delivery date
+
+Click **Save** to create the project. You will be taken to the project's Gantt view.
+
+## 2. Add Milestones
+
+Milestones mark key delivery points in your schedule. From the project view, open the milestone panel and click **Add Milestone**.
+
+Give each milestone a name and a target date. Milestones appear as markers on the Gantt chart.
+
+## 3. Add Tasks
+
+Click **Add Task** to create your first activity.
+
+For each task, specify:
+
+- **Name** — what needs to be done
+- **Start date** and **end date** (or duration)
+- **Risk level** — the uncertainty factor for this task (used in Monte Carlo simulation)
+
+Add as many tasks as needed to represent your project's work breakdown.
+
+## 4. Set Dependencies
+
+To define that one task must complete before another can start, use the **Relations** panel or drag a connector between tasks on the Gantt chart.
+
+Lineo supports standard finish-to-start dependencies. Once a dependency is set, moving the predecessor task will automatically shift the successor.
+
+## 5. Drag Tasks to Reschedule
+
+Here is where Lineo-PM shows its value. Click and drag any task bar on the Gantt chart to move it to a new date.
+
+Watch what happens:
+
+- Every task that depends on the moved task cascades forward (or backward) automatically
+- Tasks on the critical chain are highlighted
+- The projected project end date updates in real time
+
+No manual re-planning. No stale data. The plan reflects reality as soon as you make a change.
+
+## 6. Explore Further
+
+Now that you have a working project, try the advanced features:
+
+- **[Scenario Planning](/guides/scenario-planning)** — model "what if?" alternatives without touching your baseline
+- **[Risk Analysis](/guides/risk-analysis)** — run a Monte Carlo simulation to quantify delivery risk

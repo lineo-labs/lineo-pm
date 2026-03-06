@@ -1,0 +1,49 @@
+---
+title: Monte Carlo Simulation
+---
+
+# Monte Carlo Simulation
+
+## What is it?
+
+[Monte Carlo simulation](https://en.wikipedia.org/wiki/Monte_Carlo_method) is a technique for modeling uncertainty by running thousands of randomized experiments and aggregating the results into a probability distribution. In project planning, it answers the question:
+
+> *Given the uncertainty in task durations and risk levels, what is the probability distribution of our project's end date?*
+
+Rather than producing a single deterministic delivery date (which is almost always wrong), Monte Carlo gives you a **range of outcomes with associated probabilities** — which is a far more honest and useful way to reason about the future.
+
+## Why It Matters for Project Planning
+
+All schedules are estimates. Tasks take longer than expected. External dependencies are delayed. The "optimistic" plan is almost never what ships.
+
+Monte Carlo simulation forces you to make your uncertainty explicit — by assigning risk levels to tasks — and then tells you the statistical consequences of that uncertainty. You stop pretending you know exactly when things will finish, and start understanding *how likely* different outcomes are.
+
+## How Lineo Runs It
+
+Lineo-PM's simulation engine runs `N` iterations (a configurable number of passes) over your project schedule. In each iteration:
+
+1. **Task durations are sampled randomly** — based on the task's baseline duration and its assigned risk level. Higher risk tasks have wider variance in their sampled duration.
+2. The full **schedule is simulated** with the sampled durations, respecting all dependency relationships.
+3. The resulting **project end date is recorded** for that iteration.
+
+After all iterations complete, the results are aggregated into statistical outputs.
+
+## Simulation Outputs
+
+| Output | Description |
+|---|---|
+| **Slip Probability** | The percentage of simulated runs in which the project completes after the target end date |
+| **Typical Delay** | The median (P50) delay over the target date across all simulations |
+| **Percentile Delays** | P75, P85, P95 — how bad the delay gets at increasingly conservative confidence levels |
+| **Delay Distribution** | A histogram of simulated end dates, showing the shape of the uncertainty |
+| **Per-Task Slip Risk** | The probability that each individual task finishes late in the simulation |
+| **Critical Index** | How often each task appears on the critical path across simulations — a measure of structural importance |
+| **Critical Path** | The sequence of tasks that most frequently determines the project end date |
+
+## Interpreting Results
+
+A slip probability of **30%** means that under the modeled uncertainty, roughly 1 in 3 simulated projects misses the deadline. Whether that is acceptable depends on the stakes.
+
+The **critical index** is particularly valuable: a task with a high critical index is not just on one critical path — it is on many of the simulated critical paths, meaning it is a consistently high-leverage point for risk reduction.
+
+Use the [Risk Analysis guide](/guides/risk-analysis) for a walkthrough of running a simulation and interpreting the results dashboard.

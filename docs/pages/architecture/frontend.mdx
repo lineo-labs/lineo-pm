@@ -1,0 +1,105 @@
+---
+title: Frontend Architecture
+---
+
+# Frontend Architecture
+
+## Overview
+
+The Lineo-PM frontend is a **React + TypeScript** single-page application built with **Vite**. It renders the Gantt chart, scenario panels, Monte Carlo results dashboard, and all interactive planning UI. Styling is handled entirely with **Tailwind CSS**.
+
+## Technology Stack
+
+| Technology | Role |
+|---|---|
+| React 18 | UI component framework |
+| TypeScript | Type safety and developer ergonomics |
+| Vite | Fast bundler and dev server (HMR) |
+| Tailwind CSS | Utility-first styling |
+| React Query / Hooks | Server state management and API calls |
+
+## Directory Structure
+
+```
+frontend/src/
+├── App.tsx              # Root application component and routing
+├── main.tsx             # Entry point — mounts React into the DOM
+├── index.css            # Global styles and Tailwind directives
+├── assets/              # Static assets (images, icons)
+├── components/          # UI components
+│   ├── AppShell.tsx         # Top-level layout (nav, sidebar, main area)
+│   ├── CreateProjectButton.tsx
+│   ├── CreateProjectForm.tsx
+│   ├── DateRangePicker.tsx
+│   ├── MainSection.tsx      # Primary content area
+│   ├── MilestoneCreateForm.tsx
+│   ├── MilestoneEditDialog.tsx
+│   ├── MonteCarloPanel.tsx  # Simulation results dashboard
+│   ├── MultiSelectDropdown.tsx
+│   ├── ProjectCard.tsx
+│   ├── ProjectEditDialog.tsx
+│   ├── ProjectSelector.tsx
+│   ├── RiskAdjustResultPanel.tsx
+│   └── ...              # Additional components (Gantt, task forms, etc.)
+├── hooks/               # Custom React hooks
+├── lib/                 # Utility functions and API client
+├── mocks/               # Mock data for development and testing
+└── types/               # TypeScript type definitions and interfaces
+```
+
+## Key Components
+
+### `AppShell`
+
+The top-level layout component. It manages the application shell — navigation bar, sidebar (project selector, scenario switcher), and the main content area. All page-level views are rendered within AppShell.
+
+### Gantt Components
+
+The Gantt chart is the primary interactive surface of the application. It renders task bars, dependency lines, milestone markers, and handles all drag-and-drop interactions. See the [Gantt Engine](/architecture/gantt-engine) page for technical details.
+
+### `MonteCarloPanel`
+
+Displays the Monte Carlo simulation results: slip probability, percentile delays, per-task risk bars, critical index visualization, and the delay distribution histogram. Renders only when simulation results are available for the current project/scenario.
+
+### `RiskAdjustResultPanel`
+
+Shows the risk-adjustment breakdown by task, allowing users to see which risk levels are contributing most to simulated delay.
+
+## Hooks
+
+Custom hooks in `hooks/` abstract data fetching and business logic away from components. Common patterns:
+
+- API data fetching hooks (wrapping `fetch` or a query client)
+- Gantt interaction hooks (drag state, selection state)
+- Scenario selection and switching hooks
+
+## Lib Utilities
+
+The `lib/` directory contains pure utility modules including:
+
+- **API client** — a typed HTTP client that wraps `fetch` with base URL configuration, JSON serialization, and error handling. All API calls in the application go through this module.
+- **Date utilities** — helpers for Gantt date calculations
+- **Dependency graph utilities** — graph traversal helpers for dependency propagation
+
+## Types
+
+All TypeScript types and interfaces are centralized in `types/`. Core domain types include:
+
+- `Project` — project metadata and date range
+- `Task` — task definition including duration, dates, and risk level
+- `Milestone` — milestone name and target date
+- `Scenario` — scenario metadata and its relationship to the baseline
+- `Relation` — task dependency link (predecessor → successor)
+- `Update` — narrative update associated with a project or scenario
+- `SimulationResult` — Monte Carlo output (slip probability, percentile delays, per-task risks, etc.)
+
+## API Client Pattern
+
+All server communication goes through a single typed API client module in `lib/`. This client:
+
+- Reads the backend base URL from environment configuration
+- Serializes request bodies to JSON and deserializes responses
+- Handles HTTP error status codes uniformly
+- Provides typed return values for each endpoint call
+
+This pattern keeps components clean and makes it straightforward to mock the API layer in development or testing.

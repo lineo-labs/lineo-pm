@@ -1,0 +1,48 @@
+---
+title: Decision Engine
+---
+
+# Decision Engine
+
+## What Does "Decision-Driven" Mean?
+
+Most project management tools are built to **record and report** on the current state of work. Lineo-PM is built to help you **evaluate decisions** before you make them.
+
+The distinction is fundamental. A task tracker answers: *"What is the status of this ticket?"* A decision engine answers: *"If I make this change, what does the rest of the project look like?"*
+
+Lineo-PM treats your project schedule as a **live dependency graph**. Every task has a position in time and a set of relationships to other tasks. When you make a change — moving a task, adjusting a duration, blocking on an external dependency — the engine traverses the graph and propagates the effect to every downstream activity.
+
+## How Dependency Propagation Works
+
+The dependency graph in Lineo-PM is a directed acyclic graph (DAG) of tasks connected by finish-to-start relationships. When a task's end date changes, the engine:
+
+1. Identifies all **direct successors** of the changed task
+2. Recalculates the earliest possible start date for each successor
+3. Recurses through the graph, updating every transitively dependent task
+4. Flags tasks where the new date violates a constraint (e.g., a milestone deadline)
+
+This traversal is performed synchronously on the frontend for immediate visual feedback, and the updated schedule is persisted to the backend when you confirm the change.
+
+## Dependency Lock Highlighting
+
+When you drag a task, Lineo visually highlights the **dependency chain** — all tasks that are affected by the move are marked distinctly, so you can see at a glance which activities are being pulled forward and which are on the critical path.
+
+Tasks with **locked dependencies** (external constraints or fixed milestones) are also highlighted as blockers, so you know when a cascade is being absorbed by a constraint rather than propagating freely.
+
+## The Difference from a Task Tracker
+
+| Task Tracker | Decision Engine (Lineo-PM) |
+|---|---|
+| Tracks status (To Do / In Progress / Done) | Models time and dependencies |
+| Changes are point-in-time edits | Changes propagate through the graph |
+| Plan drift is discovered late | Impact is visible before you commit |
+| Single view of the future | Multiple scenarios can coexist |
+| Static reports | Live recalculation |
+
+## The Core Loop
+
+```
+Move activity → Change dependency → See impact instantly
+```
+
+This loop is the heart of Lineo-PM. Every feature — scenarios, Monte Carlo simulation, risk-adjusted planning — is built on top of this capability. Before you decide anything, you can see exactly what the decision means for your entire project timeline.

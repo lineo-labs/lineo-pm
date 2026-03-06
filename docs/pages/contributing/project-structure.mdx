@@ -1,0 +1,113 @@
+---
+title: Project Structure
+---
+
+# Project Structure
+
+Lineo-PM is organized as a **monorepo** with three top-level packages: `backend/`, `frontend/`, and `docs/`. All services are containerized and orchestrated together via Docker Compose.
+
+## Top-Level Layout
+
+```
+lineo-pm/
+├── backend/              # FastAPI backend application
+├── frontend/             # React + TypeScript frontend application
+├── docs/                 # Nextra documentation site (this site)
+├── docker-compose.dev.yml  # Development Docker Compose configuration
+├── Dockerfile.dev        # Development Dockerfile (multi-stage or backend-specific)
+├── build.sh              # Build helper script
+└── README.md
+```
+
+## Backend (`backend/`)
+
+```
+backend/
+├── backend_main.py       # Application entrypoint
+├── pyproject.toml        # Python project metadata and dependencies
+└── src/
+    ├── celery_app.py     # Celery worker configuration
+    ├── seed.py           # Database seed data
+    ├── db/
+    │   ├── database.py   # Async SQLAlchemy engine and session factory
+    │   └── models/       # ORM model definitions (one file per domain)
+    ├── migrations/
+    │   └── versions/     # Alembic auto-generated migration scripts
+    ├── routers/          # FastAPI route handlers (one file per resource)
+    │   ├── project.py
+    │   ├── tasks.py
+    │   ├── milestones.py
+    │   ├── scenarios.py
+    │   ├── simulations.py
+    │   ├── relations.py
+    │   └── updates.py
+    ├── schemas/          # Pydantic request/response schemas
+    │   ├── project.py
+    │   ├── task.py
+    │   ├── milestone.py
+    │   ├── scenario.py
+    │   ├── relation.py
+    │   └── update.py
+    ├── services/         # Business logic layer (between routers and DB)
+    └── tasks/            # Celery task definitions (simulation jobs)
+```
+
+### Key Backend Directories
+
+| Directory | Purpose |
+|---|---|
+| `src/routers/` | HTTP request handlers; one router per domain resource |
+| `src/schemas/` | Input validation and response serialization (Pydantic v2) |
+| `src/db/models/` | SQLAlchemy ORM table definitions |
+| `src/migrations/versions/` | Database schema migration history |
+| `src/tasks/` | Celery async job implementations (Monte Carlo simulation) |
+| `src/services/` | Reusable business logic shared across routers |
+
+## Frontend (`frontend/`)
+
+```
+frontend/
+├── index.html
+├── vite.config.ts        # Vite bundler configuration
+├── tailwind.config.cjs   # Tailwind CSS configuration
+├── tsconfig.json         # TypeScript compiler configuration
+├── package.json
+└── src/
+    ├── App.tsx           # Root component and routing
+    ├── main.tsx          # Application entry point
+    ├── index.css         # Global styles + Tailwind directives
+    ├── components/       # React UI components
+    ├── hooks/            # Custom React hooks (data fetching, interactions)
+    ├── lib/              # Utilities and API client
+    ├── types/            # TypeScript type definitions
+    ├── mocks/            # Mock data for local development
+    └── assets/           # Static files (images, icons)
+```
+
+### Key Frontend Directories
+
+| Directory | Purpose |
+|---|---|
+| `src/components/` | All React UI components (Gantt, panels, forms, dialogs) |
+| `src/hooks/` | Custom hooks abstracting state and side effects |
+| `src/lib/` | API client, date utilities, graph traversal helpers |
+| `src/types/` | Shared TypeScript interfaces (`Project`, `Task`, `Scenario`, etc.) |
+
+## Docs (`docs/`)
+
+```
+docs/
+├── next.config.js        # Next.js + Nextra configuration
+├── theme.config.jsx      # Nextra theme customization
+├── package.json
+└── pages/                # Documentation content (MDX files)
+    ├── index.mdx         # Homepage
+    ├── getting-started/
+    ├── concepts/
+    ├── guides/
+    ├── architecture/
+    ├── api/
+    └── contributing/
+```
+
+The documentation site is built with [Nextra](https://nextra.site/) on top of Next.js and can be run independently or deployed as a static site.

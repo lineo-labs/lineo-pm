@@ -1,0 +1,73 @@
+---
+title: System Overview
+---
+
+# System Overview
+
+## Architecture at a Glance
+
+Lineo-PM is a full-stack web application composed of four main components, all orchestrated using Docker Compose:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     Browser (User)                      │
+└────────────────────────┬────────────────────────────────┘
+                         │ HTTP / REST
+┌────────────────────────▼────────────────────────────────┐
+│              Frontend (React + Vite)                    │
+│                   localhost:5173                        │
+└────────────────────────┬────────────────────────────────┘
+                         │ HTTP / REST + JSON
+┌────────────────────────▼────────────────────────────────┐
+│             Backend API (FastAPI)                       │
+│                   localhost:8000                        │
+└──────────┬─────────────────────────┬───────────────────┘
+           │ async SQLAlchemy        │ Task Queue (Redis)
+┌──────────▼──────────┐   ┌──────────▼──────────────────┐
+│   PostgreSQL DB     │   │   Celery Worker             │
+│   (persistent data) │   │   (background simulations)  │
+└─────────────────────┘   └─────────────────────────────┘
+```
+
+## Component Descriptions
+
+### Frontend
+
+A **React + TypeScript** single-page application built with Vite. It serves the Gantt chart, scenario panels, Monte Carlo results dashboard, and all user interaction. It communicates with the backend exclusively via REST API calls.
+
+The frontend runs on `localhost:5173` in development (Vite dev server with hot module replacement).
+
+### Backend API
+
+A **FastAPI** application providing the REST API for all data operations: projects, tasks, milestones, scenarios, relations, and updates. It uses **async SQLAlchemy** to interact with PostgreSQL and exposes automatic OpenAPI documentation at `/docs`.
+
+The backend runs on `localhost:8000`.
+
+### PostgreSQL
+
+The primary persistent data store. All project data — schedules, scenarios, simulation results, task risk levels, relations, updates — is stored in a PostgreSQL database. Schema migrations are managed by **Alembic**.
+
+### Celery Worker
+
+An asynchronous background worker that handles computationally intensive jobs — primarily Monte Carlo simulations. When a simulation is requested, the API queues a Celery task, and the worker processes it independently. Results are written back to PostgreSQL and surfaced in the frontend.
+
+The Celery broker (message queue) is **Redis**, also running as a container.
+
+## How Components Interact
+
+1. The user interacts with the **Frontend** (drag a task, create a scenario, request a simulation)
+2. The frontend sends REST API requests to the **Backend API**
+3. The backend reads/writes data from **PostgreSQL** via async SQLAlchemy
+4. For simulation requests, the backend enqueues a task via **Redis** to the **Celery Worker**
+5. The worker runs the Monte Carlo simulation, writes results to PostgreSQL
+6. The frontend polls or receives notification that results are ready and displays the dashboard
+
+## Docker-Based Deployment
+
+All components are defined in `docker-compose.dev.yml`. The full stack is started with:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+Each service runs in its own container, isolated by Docker networking, with shared volumes for data persistence. This makes the development environment fully reproducible with no host-level dependencies beyond Docker itself.

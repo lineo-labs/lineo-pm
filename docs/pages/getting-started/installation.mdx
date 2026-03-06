@@ -1,0 +1,77 @@
+---
+title: Installation
+---
+
+# Installation
+
+## Prerequisites
+
+Before you begin, make sure the following tools are installed on your machine:
+
+- [Docker](https://docs.docker.com/get-docker/) — version 24 or later recommended
+- [Docker Compose](https://docs.docker.com/compose/install/) — v2 (included with Docker Desktop; available as `docker compose` on Linux)
+
+No other local dependencies are required. The entire stack — backend, frontend, database, and background workers — runs inside containers.
+
+## Step-by-Step Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-org/lineo-pm.git
+cd lineo-pm
+```
+
+### 2. Start the Development Stack
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+This command will:
+
+- Build Docker images for the backend and frontend (first run takes a few minutes)
+- Start the FastAPI backend
+- Start the React/Vite frontend dev server
+- Start a PostgreSQL database
+- Start the Celery worker for background simulation jobs
+- Apply database migrations automatically
+
+### 3. Verify the Stack is Running
+
+```bash
+docker compose -f docker-compose.dev.yml ps
+```
+
+All services should show `running` or `Up` status.
+
+## What's Available After Startup
+
+| Service | URL | Description |
+|---|---|---|
+| Frontend | [http://localhost:5173](http://localhost:5173) | React application (Vite dev server) |
+| Backend API | [http://localhost:8000](http://localhost:8000) | FastAPI REST API |
+| API Docs (Swagger) | [http://localhost:8000/docs](http://localhost:8000/docs) | Interactive OpenAPI documentation |
+| API Docs (ReDoc) | [http://localhost:8000/redoc](http://localhost:8000/redoc) | ReDoc API documentation |
+
+## About the Celery Worker
+
+Lineo-PM uses [Celery](https://docs.celeryq.dev/) for running Monte Carlo simulations asynchronously. When you trigger a simulation from the UI, the request is queued and processed in the background by the Celery worker container. The result is stored in the database and displayed in the frontend once the job completes.
+
+The Celery worker and its broker (Redis) are started automatically as part of the `docker compose` setup — no additional configuration is required.
+
+## Stopping the Stack
+
+```bash
+docker compose -f docker-compose.dev.yml down
+```
+
+To also remove the database volume (full reset):
+
+```bash
+docker compose -f docker-compose.dev.yml down -v
+```
+
+## Next Steps
+
+→ [Quick Start Guide](/getting-started/quick-start) — create your first project and explore the core features

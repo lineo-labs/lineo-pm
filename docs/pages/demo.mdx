@@ -1,0 +1,46 @@
+---
+title: Demo
+---
+
+# Demo
+
+## See Lineo-PM in Action
+
+The demo below shows the core Lineo-PM workflow: how moving a single task instantly reshapes the entire project schedule through cascading dependency propagation.
+
+## What the Demo Shows
+
+### Drag → Cascade → Understand
+
+The animated walkthrough demonstrates the following sequence:
+
+1. **A task is dragged** on the Gantt chart to a later date — simulating a delay, a resource conflict, or a scope change
+2. **Dependency propagation fires** — every task that depends on the moved activity shifts forward automatically, respecting the dependency chain
+3. **The new project end date is recalculated** in real time — no manual re-planning required
+4. **Locked dependencies are highlighted** — tasks on the critical path are visually distinguished, making it immediately obvious which chains are at risk
+
+The entire update happens without leaving the Gantt view, and without touching a single form or status field.
+
+### Scenario Comparison Workflow
+
+The demo also shows the **scenario planning** flow:
+
+1. The baseline plan is preserved as-is
+2. A new scenario is created — giving it a name ("Delayed Backend Release", "Reduced Scope", etc.)
+3. Within the scenario, tasks are rearranged to model an alternative future
+4. The scenario is compared against the baseline: you see both timelines side by side, including the difference in projected end dates
+5. If the scenario represents the better plan, it can be **promoted to baseline** with a single action
+
+## Try It Yourself
+
+The fastest way to experience Lineo-PM is to run it locally:
+
+```bash
+git clone https://github.com/your-org/lineo-pm.git
+cd lineo-pm
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+Then open [http://localhost:5173](http://localhost:5173) in your browser and create your first project.
+
+→ [Full Installation Guide](/getting-started/installation)
