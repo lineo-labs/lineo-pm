@@ -8,12 +8,12 @@ const withNextra = nextra({
 const isGithubPages = process.env.GITHUB_PAGES === 'true';
 
 export default withNextra({
-  reactStrictMode: true,
   output: 'export',
   images: {
-    unoptimized: true
+    unoptimized: true,
+    remotePatterns: []
   },
   basePath: isGithubPages ? '/lineo-pm' : '',
-  assetPrefix: isGithubPages ? '/lineo-pm/' : '',
-  trailingSlash: true
+  trailingSlash: true,
+  distDir: 'out'
 });
