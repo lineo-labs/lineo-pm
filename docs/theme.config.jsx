@@ -1,12 +1,18 @@
 const config = {
-  logo: <span style={{ fontWeight: 'bold' }}>Lineo PM Docs</span>,
+  logo: (
+    <img
+      src="/logo.png"
+      alt="Lineo PM"
+      style={{ height: '22px', width: 'auto' }}
+    />
+  ),
   project: {
-    link: 'https://github.com'
+    link: 'https://github.com/lines-labs/lineo-pm'
   },
-  chat: {
-    link: 'https://discord.com'
+  docsRepositoryBase: 'https://github.com/lines-labs/lineo-pm',
+  sidebar: {
+    defaultMenuCollapseLevel: 1,
   },
-  docsRepositoryBase: 'https://github.com',
   footer: {
     text: 'Lineo PM Documentation © 2026'
   }
