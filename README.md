@@ -7,6 +7,8 @@
 
 <h1 align="center">Open Source Decision-Driven Planning Engine</h1>
 
+**[📖 Documentation](https://lines-labs.github.io/lineo-pm/)**
+
 ![Demo](docs/demo-preview.gif)
 
 </div>
