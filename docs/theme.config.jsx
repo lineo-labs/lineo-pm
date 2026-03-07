@@ -1,7 +1,9 @@
+const basePath = process.env.GITHUB_PAGES === 'true' ? '/lineo-pm' : '';
+
 const config = {
   logo: (
     <img
-      src="/logo.png"
+      src={`${basePath}/logo.png`}
       alt="Lineo PM"
       style={{ height: '22px', width: 'auto' }}
     />
