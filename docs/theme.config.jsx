@@ -9,9 +9,9 @@ const config = {
     />
   ),
   project: {
-    link: 'https://github.com/lines-labs/lineo-pm'
+    link: 'https://github.com/lineo-labs/lineo-pm'
   },
-  docsRepositoryBase: 'https://github.com/lines-labs/lineo-pm',
+  docsRepositoryBase: 'https://github.com/lineo-labs/lineo-pm',
   sidebar: {
     defaultMenuCollapseLevel: 1,
   },
