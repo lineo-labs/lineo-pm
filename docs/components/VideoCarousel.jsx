@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/router";
 
 const videos = [
   {
@@ -21,6 +22,7 @@ const videos = [
 export default function VideoCarousel() {
   const [current, setCurrent] = useState(0);
   const videoRef = useRef(null);
+  const { basePath } = useRouter();
 
   useEffect(() => {
     const el = videoRef.current;
@@ -59,7 +61,7 @@ export default function VideoCarousel() {
           onEnded={goNext}
           style={{ width: "100%", display: "block" }}
         >
-          <source src={v.src} type="video/webm" />
+          <source src={`${basePath}${v.src}`} type="video/webm" />
         </video>
         {/* Vignette */}
         <div style={{

@@ -10,11 +10,11 @@ Every task in Lineo-PM has an associated **risk level** — a qualitative or qua
 
 Risk levels are the primary input that feed the [Monte Carlo simulation](/concepts/monte-carlo) engine. They define the width of the probability distribution from which task durations are sampled during each simulation iteration.
 
+import VideoWithBase from "../../components/VideoWithBase";
+
 ## How Risk Levels Feed Into Simulations
 
-<video autoPlay loop muted playsInline style={{ width: "100%", borderRadius: "8px", marginTop: "1.5rem" }}>
-  <source src="/risk-adjusted-demo.webm" type="video/webm" />
-</video>
+<VideoWithBase src="/risk-adjusted-demo.webm" autoPlay loop muted playsInline style={{ width: "100%", borderRadius: "8px", marginTop: "1.5rem" }} />
 
 When a simulation runs, each task's duration is not taken as a fixed value. Instead, the engine samples from a **triangular distribution** defined by three parameters derived from the task's risk level: a minimum, a most-likely (baseline), and a maximum duration.
 

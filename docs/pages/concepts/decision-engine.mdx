@@ -2,6 +2,8 @@
 title: Decision Engine
 ---
 
+import VideoWithBase from "../../components/VideoWithBase";
+
 # Decision Engine
 
 ## What Does "Decision-Driven" Mean?
@@ -14,9 +16,7 @@ Lineo-PM treats your project schedule as a **live dependency graph**. Every task
 
 ## How Dependency Propagation Works
 
-<video autoPlay loop muted playsInline style={{ width: "100%", borderRadius: "8px", marginTop: "1.5rem" }}>
-  <source src="/cascade-demo.webm" type="video/webm" />
-</video>
+<VideoWithBase src="/cascade-demo.webm" autoPlay loop muted playsInline style={{ width: "100%", borderRadius: "8px", marginTop: "1.5rem" }} />
 
 The dependency graph in Lineo-PM is a directed acyclic graph (DAG) of tasks connected by finish-to-start relationships. When a task's end date changes, the engine:
 
