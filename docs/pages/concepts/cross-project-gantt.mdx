@@ -1,0 +1,42 @@
+---
+title: Cross-Project Gantt
+---
+
+# Cross-Project Gantt
+
+## What Is the Cross-Project Gantt?
+
+The Cross-Project Gantt is a unified timeline view that renders multiple projects side by side on the same time axis. Instead of switching between individual project views to understand the broader picture, you see the full portfolio at once.
+
+Each project occupies its own horizontal lane. Tasks, milestones, and dependencies are rendered within that lane using the same visual language as the single-project Gantt, so the reading experience is consistent regardless of scale.
+
+## Why It Matters
+
+Individual projects rarely exist in isolation. Teams share engineers, designers, and infrastructure across initiatives. A delivery commitment in one project places implicit pressure on another if they compete for the same people.
+
+The Cross-Project Gantt makes that pressure visible. By placing multiple timelines on the same canvas, it surfaces:
+
+- **Resource conflicts** — two projects that need the same team members during the same window
+- **Portfolio-level slack** — periods where capacity is genuinely available for new work or buffer absorption
+
+## How It Works in Lineo
+
+Each project loaded into the Cross-Project view retains its own dependency graph and scenario state. The unified view composites them onto a shared time scale without flattening the underlying structure.
+
+You can:
+
+- **Toggle projects in and out** of the view to focus on the subset you care about
+- **Switch scenarios** per project independently — compare the optimistic scenario for one project against the risk-adjusted scenario for another
+- **Zoom and pan** the timeline as you would on a single project, with the same scale controls (day / week / month)
+
+Dependency arrows that cross project boundaries are rendered as cross-lane connectors, making inter-project sequencing explicit rather than implicit.
+
+## When to Use It
+
+Use the Cross-Project Gantt when:
+
+- You manage more than one concurrent project with shared team members
+- A delivery in Project A gates work in Project B
+- You are preparing a portfolio review and need a single artefact that tells the full story
+
+For day-to-day planning within a single project, the standard Gantt view remains the primary interface.

@@ -4,5 +4,6 @@ export default {
   "monte-carlo": "Monte Carlo Simulation",
   "risk-adjusted": "Risk-Adjusted Scenarios",
   milestones: "Milestones",
-  updates: "Updates"
+  updates: "Updates",
+  "cross-project-gantt": "Cross-Project Gantt"
 };
