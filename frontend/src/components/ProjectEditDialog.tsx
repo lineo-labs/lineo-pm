@@ -38,7 +38,7 @@ export const ProjectEditDialog = ({ project, open, onClose, onSave }: ProjectEdi
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 p-4">
+    <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/70 p-4 pt-16">
       <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-2xl">
         <div className="flex items-start justify-between">
           <div>
