@@ -31,7 +31,7 @@ Most project tools are built to record and report on the current state of work. 
 
 > Move an activity. Watch the dependencies cascade. Know instantly what changed.
 
-Lineo models your project schedule as a live dependency graph. Every change you make — dragging a task, adjusting a duration, switching a scenario — propagates through the plan in real time, so you always see the downstream impact before committing.
+Lineo models your project schedule as a live dependency graph. Every change you make — dragging a task, adjusting a duration, switching a scenario — propagates through the plan in real time, so you always see the downstream impact before committing. This allows you to explore alternatives, stress-test your plan, and communicate with stakeholders in a way that static task trackers can't support.
 
 → Read more: [Decision Engine](https://lineo-labs.github.io/lineo-pm/concepts/decision-engine)
 
