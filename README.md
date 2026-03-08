@@ -7,7 +7,6 @@
 <h1 align="center">Open Source Decision-Driven Planning Engine</h1>
 
 <p align="center">
-  <a href="https://lineo-labs.github.io/lineo-pm/"><strong>Documentation</strong></a> ·
   <a href="https://lineo-labs.github.io/lineo-pm/getting-started/installation">Getting Started</a> ·
   <a href="https://lineo-labs.github.io/lineo-pm/concepts/decision-engine">Concepts</a> ·
   <a href="https://lineo-labs.github.io/lineo-pm/api-reference/backend">API Reference</a>
