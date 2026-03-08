@@ -14,6 +14,10 @@ Lineo-PM treats your project schedule as a **live dependency graph**. Every task
 
 ## How Dependency Propagation Works
 
+<video autoPlay loop muted playsInline style={{ width: "100%", borderRadius: "8px", marginTop: "1.5rem" }}>
+  <source src="/cascade-demo.webm" type="video/webm" />
+</video>
+
 The dependency graph in Lineo-PM is a directed acyclic graph (DAG) of tasks connected by finish-to-start relationships. When a task's end date changes, the engine:
 
 1. Identifies all **direct successors** of the changed task
@@ -45,4 +49,3 @@ Tasks with **locked dependencies** (external constraints or fixed milestones) ar
 Move activity → Change dependency → See impact instantly
 ```
 
-This loop is the heart of Lineo-PM. Every feature — scenarios, Monte Carlo simulation, risk-adjusted planning — is built on top of this capability. Before you decide anything, you can see exactly what the decision means for your entire project timeline.

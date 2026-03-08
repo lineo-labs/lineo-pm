@@ -12,13 +12,15 @@ Risk levels are the primary input that feed the [Monte Carlo simulation](/concep
 
 ## How Risk Levels Feed Into Simulations
 
-When a simulation runs, each task's duration is not taken as a fixed value. Instead, the engine samples from a range shaped by the task's risk level:
+<video autoPlay loop muted playsInline style={{ width: "100%", borderRadius: "8px", marginTop: "1.5rem" }}>
+  <source src="/risk-adjusted-demo.webm" type="video/webm" />
+</video>
 
-- **Low risk** — small variance; the sampled duration is close to the baseline estimate
-- **Medium risk** — moderate variance; the task could take meaningfully more or less than planned
-- **High risk** — wide variance; the task's actual duration could differ substantially from the estimate
+When a simulation runs, each task's duration is not taken as a fixed value. Instead, the engine samples from a **triangular distribution** defined by three parameters derived from the task's risk level: a minimum, a most-likely (baseline), and a maximum duration.
 
-The higher the risk level, the more the simulation spreads out — and the higher the resulting slip probability for the project as a whole.
+The risk level controls how asymmetric and wide that triangle is — a low-risk task has a narrow, nearly symmetric distribution, while a high-risk task has a wider range skewed toward longer durations.
+
+> **Note:** Per-task risk level variance (low / medium / high) and per-task slip probability will be exposed as direct inputs in a future release. The current model uses the triangular distribution as its sampling mechanism.
 
 ## Building Risk-Adjusted Scenarios
 
@@ -30,13 +32,33 @@ A **risk-adjusted scenario** is a scenario in which you have deliberately modele
 
 To build a risk-adjusted scenario:
 
-1. Create a new scenario from the baseline (see [Scenarios](/concepts/scenarions))
-2. Within the scenario, review each task and adjust its risk level to reflect increased uncertainty
-3. Consider adding buffer tasks or moving milestones to reflect contingency
-4. Run a Monte Carlo simulation on the scenario
-5. Compare the simulation results against the baseline scenario's simulation results
+1. Select pessimistic risk level (P80, P90, or P99) in dropdown named "Create risk-adjusted scenario"
+2. Lineo creates a new scenario with the same tasks and dependencies as the baseline, but with risk levels adjusted to reflect the selected confidence level
 
 ## Interpreting the Risk-Adjusted Results
+
+After the engine runs, a results panel shows two tabs: **Task Shifts** and **Original Monte Carlo**.
+
+### Task Shifts
+
+The Task Shifts table shows exactly what the engine did to each task and why:
+
+| Column | Meaning |
+|---|---|
+| **Task** | Task name |
+| **Orig dates** | Baseline start → end dates |
+| **New dates** | Adjusted start → end dates in the risk scenario |
+| **Buffer** | Calendar days of buffer added to this task's duration |
+| **CI** | Critical Index — how often this task appeared on the critical path across all simulation runs (higher = more dangerous) |
+| **σ** | Duration uncertainty in days (standard deviation of the triangular sample distribution) |
+| **End Δ** | How many days later the task ends compared to the baseline |
+| **Reason** | Plain-language explanation of why (or why not) a buffer was applied |
+
+Tasks with no schedule shift are shown at reduced opacity — they were evaluated but did not require adjustment.
+
+### Original Monte Carlo
+
+The second tab shows the Monte Carlo analysis that was run on the **original baseline** before any risk adjustment. This gives you the full picture: slip probability, delay distribution histogram, percentiles (P50/P75/P90/P99), and the critical index ranking for each task.
 
 When you compare a risk-adjusted scenario to the baseline, focus on:
 

@@ -38,18 +38,18 @@ export const GanttBar = ({
   return (
     <div
       className={
-            variant === "base"
-              ? `relative flex h-2 touch-none select-none items-center gap-2 rounded-full bg-emerald-600 px-2 text-xs font-medium text-emerald-200 pointer-events-none`
-          : `absolute top-2 flex h-7 touch-none select-none items-center justify-between gap-2 rounded-full bg-indigo-500/70 px-2 text-xs font-medium text-white shadow-sm shadow-indigo-500/30 ${
+        variant === "base"
+          ? `absolute top-0 h-7 rounded-full border-2 border-dashed border-amber-400/60 bg-amber-500/10 pointer-events-none`
+          : `absolute top-2 flex h-7 touch-none select-none items-center justify-between gap-2 rounded-full bg-indigo-600 px-2 text-xs font-medium text-white shadow-sm shadow-indigo-500/30 ${
               isDragging ? "cursor-ew-resize" : isRowDragging ? "cursor-grabbing" : "cursor-grab"
             } ${isRowDragging ? "opacity-80" : ""}`
       }
       style={
         variant === "base"
           ? {
-              marginLeft: offset,
+              left: offset,
               width,
-              transition: isDragging ? "none" : "margin-left 150ms ease",
+              transition: "left 150ms ease",
             }
           : {
               left: offset,
@@ -107,8 +107,8 @@ export const GanttBar = ({
           />
         </>
       ) : (
-        // base variant: render no title (visual-only thin bar)
-        <div className="w-full" />
+        // base variant: ghost placeholder — no interactive content
+        null
       )}
     </div>
   );

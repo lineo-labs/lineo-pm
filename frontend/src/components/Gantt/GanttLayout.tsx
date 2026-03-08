@@ -396,8 +396,12 @@ export const GanttLayout = ({
 
   const scenarioDeltas = useMemo(() => {
     if (!scenarioMode) return null;
-    return computeScenarioDeltas(visibleTasks, scenarioTasks);
-  }, [scenarioMode, scenarioTasks, visibleTasks]);
+    // When a scenario is loaded, App.tsx updates `tasks` to the loaded scenario tasks,
+    // so visibleTasks === scenarioTasks and every delta would be 0.
+    // Use baselineTasks (the actual reference baseline) when available.
+    const baseline = baselineTasks ?? visibleTasks;
+    return computeScenarioDeltas(baseline, scenarioTasks);
+  }, [scenarioMode, scenarioTasks, visibleTasks, baselineTasks]);
 
   // Relations are always visible now; removed toggle state
 
@@ -692,7 +696,11 @@ export const GanttLayout = ({
                             const projectId = typeof projectIdProp !== 'undefined' ? projectIdProp : tasks[0]?.scenarioId ?? undefined;
                             if (projectId) {
                               const scenarios = await fetchScenarios(projectId);
-                              const baseline = scenarios.find((s: any) => (s as any).isBaseline === true) ?? scenarios[0];
+                              // Prefer a scenario marked as baseline; exclude the one being loaded
+                              // to avoid comparing a scenario against itself.
+                              const loadedId = s.id;
+                              const baseline = scenarios.find((sc: any) => (sc as any).isBaseline === true && sc.id !== loadedId)
+                                ?? scenarios.find((sc: any) => sc.id !== loadedId);
                               if (baseline) {
                                 const baselineDtos = await fetchScenarioTasks(baseline.id);
                                 setBaselineTasks(

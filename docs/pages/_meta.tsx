@@ -35,13 +35,14 @@ export default {
     ),
   },
 
-  demo: {
-    title: (
-      <Label icon={<I d="M5 3l14 9-14 9V3z" />}>
-        Demo
-      </Label>
-    ),
-  },
+  // demo: {
+  //   title: (
+  //     <Label icon={<I d="M5 3l14 9-14 9V3z" />}>
+  //       Demo
+  //     </Label>
+  //   ),
+  // },
+  demo: { display: "hidden" },
 
   "getting-started": {
     title: (
