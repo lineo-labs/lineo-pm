@@ -1,0 +1,107 @@
+---
+title: Development Setup
+---
+
+# Development Setup
+
+This page describes how to set up a local development environment for contributing to Lineo-PM.
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) v24+
+- [Docker Compose](https://docs.docker.com/compose/install/) v2
+- [Git](https://git-scm.com/)
+- A code editor (VS Code recommended)
+
+No other local dependencies are required — Python, Node.js, and PostgreSQL all run inside Docker containers.
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-org/lineo-pm.git
+cd lineo-pm
+```
+
+## 2. Start the Development Stack
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+This builds and starts all services:
+
+| Service | URL |
+|---|---|
+| Frontend (Vite dev server) | http://localhost:5173 |
+| Backend API (FastAPI) | http://localhost:8000 |
+| API Docs (Swagger) | http://localhost:8000/docs |
+
+The Vite dev server supports **hot module replacement (HMR)** — frontend changes are reflected in the browser immediately without a container rebuild. Backend code changes require restarting the backend container.
+
+## 3. Stopping the Stack
+
+```bash
+docker compose -f docker-compose.dev.yml down
+```
+
+For a full reset (including database data):
+
+```bash
+docker compose -f docker-compose.dev.yml down -v
+```
+
+## Branch Strategy
+
+| Branch | Purpose |
+|---|---|
+| `main` | Stable, released code. Always deployable. |
+| `dev` | Active development branch. All feature work merges here. |
+| `feature/*` | Short-lived feature branches, branched from and merged back to `dev`. |
+
+**Never commit directly to `main`.** All development work goes through `dev`.
+
+## Development Workflow
+
+1. **Branch from `dev`**:
+   ```bash
+   git checkout dev
+   git pull origin dev
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make changes** — implement your feature or fix
+
+3. **Test locally** — make sure the stack runs and the feature works end-to-end
+
+4. **Open a pull request against `dev`** — not `main`
+
+5. **Keep PRs small and focused** — one concern per pull request makes review faster and easier
+
+## Backend Development
+
+Backend source code lives in `backend/src/`. The FastAPI application auto-reloads on code changes when running in development mode. If you add new dependencies, update `backend/pyproject.toml` and rebuild the container:
+
+```bash
+docker compose -f docker-compose.dev.yml build backend
+docker compose -f docker-compose.dev.yml up -d backend
+```
+
+### Database Migrations
+
+When you change ORM models, generate a new Alembic migration:
+
+```bash
+docker compose -f docker-compose.dev.yml exec backend alembic revision --autogenerate -m "description"
+docker compose -f docker-compose.dev.yml exec backend alembic upgrade head
+```
+
+## Frontend Development
+
+Frontend source code lives in `frontend/src/`. Changes are picked up automatically by the Vite HMR server inside the container — no rebuild needed.
+
+If you add new npm dependencies, update `frontend/package.json` and rebuild the frontend container:
+
+```bash
+docker compose -f docker-compose.dev.yml build frontend
+docker compose -f docker-compose.dev.yml up -d frontend
+```

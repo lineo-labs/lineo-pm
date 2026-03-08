@@ -1,0 +1,60 @@
+---
+title: Scenarios
+---
+
+import VideoWithBase from "../../components/VideoWithBase";
+
+# Scenarios
+
+## What is a Scenario?
+
+A **scenario** in Lineo-PM is a persistent alternative timeline for your project. It is a full copy of your project's schedule that you can modify independently — adding tasks, moving activities, changing dependencies — without affecting your baseline plan.
+
+Think of scenarios as branches in a version control system: the baseline is your `main` branch, and each scenario is an experimental branch where you can safely model a different future.
+
+<VideoWithBase src="/scenario-demo.webm" autoPlay loop muted playsInline style={{ width: "100%", borderRadius: "8px", marginTop: "1.5rem" }} />
+
+## Why Use Scenarios?
+
+Real projects rarely follow a single plan. Stakeholders ask "what if we cut scope?", "what if the backend slips?", "what if we ship in two phases?" — all before committing to anything.
+
+Scenarios let you answer these questions concretely. Instead of reasoning in the abstract, you can model each alternative as a full schedule, compare the projected outcomes, and then make an informed decision about which path to take.
+
+## How Scenarios Work
+
+### Creating a Scenario
+
+From any project view, open the **Scenarios** panel and click **New Scenario**. Give it a descriptive name that captures the hypothesis being modeled (e.g., "Phase 2 Deferred", "Reduced Sprint Capacity").
+
+Lineo creates a snapshot of the current baseline schedule and associates it with the new scenario. You can now edit this scenario independently.
+
+### Editing Within a Scenario
+
+When a scenario is active, all changes you make — dragging tasks, adjusting dates, modifying dependencies — apply only to that scenario. Your baseline plan remains untouched.
+
+Within a scenario you can:
+
+- Move tasks to different dates
+- Add or remove dependencies
+- Adjust task durations and risk levels
+- Add narrative updates explaining your assumptions
+
+### Comparing Scenarios
+
+You can view any scenario side by side with your baseline. The comparison shows:
+
+- Timeline differences: which tasks moved and by how much
+- New projected project end date
+- Risk delta: how simulation results differ between the baseline and the scenario
+
+This gives you an apples-to-apples comparison to support a concrete decision.
+
+### Promoting a Scenario to Baseline
+
+When you have decided that a scenario represents the path you are committing to, you can **promote it to baseline**. This replaces the current baseline with the scenario's schedule, and the scenario is retired.
+
+All other scenarios remain intact and are automatically rebased against the new baseline.
+
+## Scenarios and Monte Carlo
+
+Every scenario can be submitted for an independent [Monte Carlo simulation](/concepts/monte-carlo). This means you can compare not just the nominal timelines but the *probabilistic risk profiles* of each alternative — giving you a statistically grounded basis for choosing between plans.

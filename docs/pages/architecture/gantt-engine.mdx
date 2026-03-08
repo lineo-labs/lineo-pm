@@ -1,0 +1,78 @@
+---
+title: Gantt Engine
+---
+
+# Gantt Engine
+
+## Overview
+
+The Gantt chart is the primary interactive surface of Lineo-PM. It is not a static chart — it is a live planning canvas where users drag tasks, see dependencies cascade, and make scheduling decisions. This page describes how the Gantt engine works under the hood.
+
+## Rendering
+
+The Gantt chart renders a time-scaled grid where:
+
+- **Rows** represent tasks (and milestones)
+- **Columns** represent time (days, weeks, or months depending on zoom level)
+- **Bars** represent task durations, positioned according to their start and end dates
+- **Lines** connect dependent tasks, drawn as arrows or edges from predecessor to successor
+- **Milestone markers** are rendered as diamond or flag icons at their target dates
+
+The chart is rendered in the browser using either SVG or a canvas-based approach, allowing smooth interactions even with a large number of tasks.
+
+## Drag-and-Drop Mechanics
+
+When a user drags a task bar:
+
+1. **Drag start** — the task's current position is recorded; the bar enters a "dragging" visual state
+2. **Drag move** — the bar follows the pointer, and a ghost preview shows the new date range; the delta (how many days the task would move) is computed continuously
+3. **Snap to grid** — the bar snaps to day (or configurable period) boundaries as the pointer moves, preventing partial-day placements
+4. **Cascade preview** — while dragging, the dependency propagation algorithm runs on the new hypothetical position and the projected shifts of all dependent tasks are shown in real time as preview positions
+5. **Drop** — when the user releases, the new dates are committed; the dependency cascade is finalized and sent to the backend via the API
+
+## Dependency Graph Traversal
+
+Dependency propagation is implemented as a **forward pass traversal** over the dependency DAG:
+
+```
+function propagate(movedTask, deltadays):
+  queue = directSuccessors(movedTask)
+  visited = {}
+
+  while queue is not empty:
+    task = queue.dequeue()
+    if task in visited: continue
+    visited.add(task)
+
+    newStart = max(task.earliestStart, predecessorEndDate(task))
+    if newStart != task.start:
+      task.start += delta
+      task.end   += delta
+      queue.enqueue(directSuccessors(task))
+```
+
+The traversal is breadth-first to ensure that tasks with multiple predecessors are not processed until all predecessors have been updated.
+
+Tasks with **fixed constraints** (pinned milestones, locked tasks) act as absorbers: the cascade stops at them, and their successors are not updated unless the constraint is relaxed.
+
+## Lock and Highlight Logic
+
+When a drag is in progress, the Gantt engine classifies each task into one of several visual states:
+
+| State | Visual Treatment | Meaning |
+|---|---|---|
+| **Moving** | Solid drag preview | The task being dragged |
+| **Cascading** | Highlighted bar (e.g., amber) | Task is shifting due to the drag |
+| **Locked** | Red highlight or lock icon | Task has a constraint that stops propagation |
+| **Critical** | Bold or colored border | Task is on the critical path |
+| **Unaffected** | Normal style | Task has no dependency on the moved task |
+
+This visual layer gives users immediate, unambiguous feedback about which parts of the plan are affected by their action before they commit to it.
+
+## Zoom and Navigation
+
+The chart supports multiple zoom levels (day, week, month) and smooth horizontal scrolling. The visible time window is adjustable, and tasks outside the current window are clipped but remain in the model.
+
+## Persistence
+
+After a drag is confirmed, the Gantt engine sends an update request to the backend API with the new start/end dates for all affected tasks. The backend persists the changes and the updated schedule is reflected on next load (or pushed via optimistic update in the UI).

@@ -2,8 +2,7 @@
 
 <p align="center">
     <img src="frontend/src/assets/logo.png" width="160" alt="lineo logo" />
-<p>
-
+</p>
 
 <h1 align="center">Open Source Decision-Driven Planning Engine</h1>
 
@@ -11,104 +10,53 @@
 
 </div>
 
-## What is lineo?
+---
 
-**Lineo-PM** is not a task manager, but a modern decision-engine tool built around **dependencies propagation**, **scenario planning** and **Monte Carlo simulation**.
+## What is Lineo-PM?
 
-It helps you to answer:
-> what happens if I move this?
-> what if plan B is needed?
+**Lineo-PM** is not a task tracker. It is a **decision-driven planning engine** built around dependency propagation, scenario planning, and Monte Carlo risk simulation.
 
-The GIF above shows the core interaction: 
-* dragging a task to a new date automatically updates all dependent tasks, allowing you to instantly see the impact of your decision. 
-* create scenarios to model different timelines and compare them with the baseline.
+Most project tools are built to record and report on the current state of work. Lineo-PM is built to help you **evaluate decisions before you make them**.
 
-The idea is simple: **Move activities. Change dependencies. Instantly see the impact.**
+> Move an activity. Watch the dependencies cascade. Know instantly what changed.
 
-Lineo helps you understand **how decisions affect time**.
+Lineo models your project schedule as a live dependency graph. Every change you make — dragging a task, adjusting a duration, switching a scenario — propagates through the plan in real time, so you always see the downstream impact before committing. This allows you to explore alternatives, stress-test your plan, and communicate with stakeholders in a way that static task trackers can't support.
 
-Hover over a task to highlight its dependency chain and immediately visualize project dynamics.
+→ Read more: [Decision Engine](https://lineo-labs.github.io/lineo-pm/concepts/decision-engine)
 
 ---
 
-## What are scenarios?
+## Core Capabilities
 
-Scenarios are persistent alternative project timelines that you can create, modify, and compare with actual baselines. They allow you to model different "what if" situations without affecting your main plan. You can save multiple scenarios, each representing a different set of assumptions or decisions, and easily switch between them to analyze their impacts. **Planning becomes a measurable decision process.**
+### Cascading Dependency Propagation
+Move one task and all downstream activities adjust automatically. The engine traverses the full dependency graph instantly, flagging constraint violations as they appear.
 
-You can promote a scenario to become the new baseline, or keep it as a reference for future planning. This way, you can explore various options and make informed decisions based on how they affect your project timeline.
+### Scenario Engine
+Create persistent alternative timelines, modify them independently, compare against your baseline, and promote the best plan to production.  
+→ [Scenarios](https://lineo-labs.github.io/lineo-pm/concepts/scenarios)
 
----
+### Monte Carlo Simulation
+Run probabilistic risk analysis. Get slip probability, per-task critical index, delay distribution histograms, and P50–P99 percentile estimates across thousands of simulated runs.  
+→ [Monte Carlo](https://lineo-labs.github.io/lineo-pm/concepts/monte-carlo)
 
-<div align="center">
-<h1 align="center">Monte Carlo Simulation</h1>
+### Risk-Adjusted Planning
+Automatically generate a risk-buffered scenario at a target confidence level (P80, P90, P99). The engine computes per-task buffers from the critical index and duration uncertainty, explains every shift, and saves the result as a new scenario.  
+→ [Risk-Adjusted Scenarios](https://lineo-labs.github.io/lineo-pm/concepts/risk-adjusted)
 
-![Monte Carlo](docs/monte-carlo-preview.png)
-</div>
-
-Monte Carlo simulations let you evaluate how uncertainty in task durations and risk levels can affect the entire project timeline. Rather than focusing on a single plan, Monte Carlo runs many randomized schedule scenarios and summarizes the overall risk and likely outcomes.
-
-High-level outputs you can use for planning:
-
-- **Project slip probability:** how often the project finishes after the baseline
-- **Typical and percentile delays:** median/percentile delay estimates for decision-making
-- **Per-task slip risk:** which tasks contribute most to overall schedule risk
-- **Delay distribution & worst-case estimate:** a distribution of possible delays and a simple worst-case date estimate
-- **Critical Index & Critical Path:** which tasks are most often on the critical path across simulations
-  
----
-
-## Why lineo?
-
-Most project tools focus on task tracking, gamification, or Kanban workflows.
-
-Lineo focuses on **decision support**.
-
-It is **time-first**, not board-first.
-
-With lineo you can:
-
-* Visualize the entire project timeline at a glance
-* Adjust schedules using intuitive drag & drop
-* Understand milestone impact instantly
-* Track progress as a coherent timeline story
-* Maintain update logs for audit and reporting
-
-Instead of managing tasks, you manage **project flow**.
-
----
-
-## Designed For:
-
-* Project managers
-* Founders
-* CTOs
-* Executives
-* Product Leaders
-
-People who need to:
-
-* Replan under pressure
-* Explain delays
-* Model impacts before making decisions
-* Tell the story of a project
-
-## Key Features (Current)
-
-* Interactive Gantt charts with drag-and-drop scheduling
-* Cascading dependency propagation
-* No spaghetti lineo - (lock higlighting)
-* Time-first UX
-* Narrative Updates
-* Decision impact modeling
+### Milestone & Narrative Updates
+Anchor key delivery points on the timeline and log decision-driven update entries that build an audit trail of your project's story.
 
 ---
 
 ## Quick Start
 
+### Prerequisites
+- Docker and Docker Compose
+
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-org/lineo-pm.git
+git clone https://github.com/lineo-labs/lineo-pm.git
 cd lineo-pm
 ```
 
@@ -120,84 +68,67 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ### 3. Access the application
 
-Frontend:
-[http://localhost:5173](http://localhost:5173)
+| Service | URL |
+|---|---|
+| Frontend | [http://localhost:5173](http://localhost:5173) |
+| Backend API docs | [http://localhost:8000/docs](http://localhost:8000/docs) |
 
-Backend OpenAPI docs:
-`/docs` on the API URL
+For full installation instructions → [Getting Started](https://lineo-labs.github.io/lineo-pm/getting-started/installation)
 
-> Note: Celery is configured for background jobs. The application works even if workers are not running.
+---
+
+## Documentation
+
+The full documentation is available at **[lineo-labs.github.io/lineo-pm](https://lineo-labs.github.io/lineo-pm/)**.
+
+| Section | Description |
+|---|---|
+| [Getting Started](https://lineo-labs.github.io/lineo-pm/getting-started/installation) | Installation, configuration, first run |
+| [Concepts](https://lineo-labs.github.io/lineo-pm/concepts/decision-engine) | Decision engine, scenarios, Monte Carlo, risk adjustment |
+| [Architecture](https://lineo-labs.github.io/lineo-pm/architecture/system-overview) | System overview, backend, frontend, Gantt engine |
+| [API Reference](https://lineo-labs.github.io/lineo-pm/api-reference/backend) | Full REST API reference |
+| [Contributing](https://lineo-labs.github.io/lineo-pm/contributing) | Development workflow and guidelines |
 
 ---
 
 ## Technology Stack
 
-**Backend**
-
-* FastAPI
-* PostgreSQL (async SQLAlchemy)
-* Celery (background jobs ready)
-
-**Frontend**
-
-* React
-* TypeScript
-* Tailwind CSS
-* Vite
-
-**Infrastructure**
-
-* Docker
-* Docker Compose
+| Layer | Technologies |
+|---|---|
+| **Backend** | FastAPI, PostgreSQL (async SQLAlchemy), Celery |
+| **Frontend** | React, TypeScript, Tailwind CSS, Vite |
+| **Infrastructure** | Docker, Docker Compose |
 
 ---
 
 ## Roadmap
 
-* [x] Baseline drafting and comparison
-* [x] Monte Carlo simulation with risk analysis
-* [x] Risk adjusted scenarios
-* [ ] Cross-project Gantt view
-* [ ] User authentication & permissions
-* [ ] Optional AI Assistant (Jarvis-style) for:
+- [x] Interactive Gantt with cascading dependency propagation
+- [x] Scenario engine with baseline comparison
+- [x] Monte Carlo simulation with per-task risk analysis
+- [x] Risk-adjusted scenario generation
+- [x] Cross-project Gantt view
+- [ ] User authentication & permissions
+- [ ] AI assistant — auto-suggest durations, natural language queries, predictive analytics
 
-  * Auto-suggest task durations
-  * Generate project summaries
-  * Intelligent CSV/Excel import
-  * Natural language queries (e.g. "Show me all tasks delayed by more than 2 days")
-  * Predictive analytics (e.g. "What happens if we delay Task X by 3 days?")
-  * Bottleneck identification (e.g. "Which tasks are most likely to cause delays?")
-
-> Other features and improvements will be added based on user feedback and contributions. Order of implementation may change.
+> Priorities may shift based on feedback. See [open issues](https://github.com/lineo-labs/lineo-pm/issues) for the current backlog.
 
 ---
 
 ## Contributing
 
-Contributions are welcome.
+Contributions are welcome. Please read the [contributing guide](https://lineo-labs.github.io/lineo-pm/contributing) before opening a pull request.
 
-* Prefer small, focused pull requests
-* Follow the existing architecture:
+**Branch model:**
+- `main` — stable, production-ready
+- `dev` — active development (target for all PRs)
 
-  * FastAPI backend
-  * PostgreSQL database
-  * React frontend
-  
-* Keep changes consistent with the project style
-
-## Branches:
-
-* `main`: Stable production-ready code
-* `dev`: Active development branch (new features, bug fixes)
-
-## Workflow:
-1. All contributions must be made against the `dev` branch
-2. Create a new branch for your feature or bug fix (e.g. `feature/new-feature` or `bugfix/issue-123`)
-3. Open a pull request against `dev` with a clear description of your changes
-4. PRs will be reviewed and merged into `dev` after approval
-5. Periodically, `dev` will be merged into `main` for stable releases
+**Workflow:**
+1. Branch off `dev` (`feature/...` or `bugfix/...`)
+2. Open a pull request against `dev` with a focused, descriptive change
+3. After review and merge into `dev`, changes are periodically promoted to `main`
 ---
 
 ## License
 
-Apache License 2.0
+Licensed under the [Apache License 2.0](LICENSE).

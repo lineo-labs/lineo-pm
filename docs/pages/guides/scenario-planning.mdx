@@ -1,0 +1,71 @@
+---
+title: Scenario Planning
+---
+
+# Guide: Scenario Planning
+
+This guide walks you through creating a scenario, editing it independently from the baseline, comparing it, and promoting it when you are ready to commit.
+
+## Prerequisites
+
+- A project with at least a few tasks and dependencies already set up
+- See [Create a Project](/guides/create-project) if you need to get started
+
+## Step 1: Open the Scenarios Panel
+
+From your project view, locate the **Scenarios** control — typically in the top navigation or sidebar. Your current plan is the **Baseline** scenario.
+
+## Step 2: Create a New Scenario
+
+Click **New Scenario**. A dialog will prompt you for a name.
+
+Choose a name that captures the *hypothesis* or *change* this scenario models. Good examples:
+
+- "Delayed Infrastructure Setup"
+- "Reduced Team — 3 Devs"
+- "MVP Scope Only"
+- "External Vendor Dependency"
+
+Click **Create**. Lineo will copy the current baseline schedule into the new scenario and make it active.
+
+## Step 3: Edit the Scenario
+
+With the new scenario active, all changes you make apply only to this scenario. Your baseline remains unchanged.
+
+Try the following to model your hypothesis:
+
+- **Drag tasks** to new dates to simulate delays or accelerations
+- **Adjust durations** to reflect scope changes or different effort estimates
+- **Add or remove dependencies** to model restructured work
+- **Change risk levels** on specific tasks to reflect new information
+- **Add narrative updates** to document your assumptions within this scenario
+
+As you make changes, the Gantt chart updates live and shows the new projected end date for this scenario.
+
+## Step 4: Compare Against the Baseline
+
+Switch to the **comparison view** (if available) or toggle between the baseline and your scenario using the scenario selector.
+
+Look for:
+
+- **End date difference** — does the scenario shift delivery earlier or later by how much?
+- **Task movements** — which tasks shifted significantly?
+- **Critical path changes** — did the sequence of constraining tasks change?
+
+If you want a probabilistic comparison, run a [Monte Carlo simulation](/guides/risk-analysis) on both the baseline and the scenario separately, then compare the slip probabilities and percentile delays.
+
+## Step 5: Promote the Scenario to Baseline
+
+Once you have decided that the scenario represents the plan you are committing to:
+
+1. Open the scenario's context menu or action panel
+2. Click **Promote to Baseline**
+3. Confirm the action
+
+The scenario's schedule becomes the new baseline. All other scenarios remain intact.
+
+## Tips
+
+- Create multiple scenarios before deciding — having two or three alternatives makes the decision more meaningful
+- Use the scenario name and narrative updates to record the reasoning behind each model
+- Scenarios are persistent: you can return to them later, even after promoting a different one

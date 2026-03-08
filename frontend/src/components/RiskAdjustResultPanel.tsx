@@ -218,6 +218,20 @@ export const RiskAdjustResultPanel = ({ result, onClose }: Props) => {
                   {mc.mean_delay_days_when_slip.toFixed(1)}d
                 </span>
               </div>
+              <div className="mb-1">
+                Worst case date:{" "}
+                <span className="font-medium text-slate-100">
+                  {(() => {
+                    try {
+                      const bd = new Date(mc.baseline_end);
+                      if (isNaN(bd.getTime())) return "N/A";
+                      const maxDelay = Math.max(...histoEntries.map((e) => e.delay), 0);
+                      const worst = new Date(bd.getTime() + maxDelay * 86400000);
+                      return worst.toISOString().slice(0, 10);
+                    } catch { return "N/A"; }
+                  })()}
+                </span>
+              </div>
               <div className="mt-3 text-xs text-slate-400 mb-1 font-medium">Percentiles (delay days)</div>
               <div className="mb-0.5">
                 P50: <span className="font-medium text-slate-100">{mc.percentiles_days.p50}d</span>
@@ -237,39 +251,55 @@ export const RiskAdjustResultPanel = ({ result, onClose }: Props) => {
             <div className="flex-1 min-w-0">
               <div className="text-xs text-slate-400 mb-1 font-medium">Delay distribution</div>
               {histoEntries.length > 0 && (
-                <svg
-                  viewBox={`0 0 ${histoEntries.length * 12} 100`}
-                  className="w-full h-28"
-                  preserveAspectRatio="none"
-                >
-                  {histoEntries.map((e, i) => {
-                    const h = (e.prob / maxProb) * 90;
-                    return (
-                      <g key={e.delay}>
-                        <rect
-                          x={i * 12}
-                          y={95 - h}
-                          width={10}
-                          height={h}
-                          fill={e.delay === 0 ? "#10b981" : "#f59e0b"}
-                          opacity={0.7}
-                          rx={1}
-                        />
-                        {i % 5 === 0 && (
+                <div className="overflow-x-auto">
+                  <svg
+                    width={histoEntries.length * 28}
+                    height={160}
+                    style={{ display: "block", minWidth: "100%" }}
+                  >
+                    {histoEntries.map((e, i) => {
+                      const BAR_W = 22;
+                      const BAR_STEP = 28;
+                      const CHART_H = 110;
+                      const h = Math.max(2, (e.prob / maxProb) * CHART_H);
+                      const y = CHART_H - h + 10;
+                      const rawPct = e.prob * 100;
+                      const pctLabel = rawPct < 0.1 ? "<0.1%" : `${rawPct.toFixed(1)}%`;
+                      const cx = i * BAR_STEP + BAR_W / 2;
+                      return (
+                        <g key={e.delay}>
+                          <rect
+                            x={i * BAR_STEP}
+                            y={y}
+                            width={BAR_W}
+                            height={h}
+                            fill={e.delay === 0 ? "#10b981" : "#f59e0b"}
+                            opacity={0.85}
+                            rx={3}
+                          />
                           <text
-                            x={i * 12 + 5}
-                            y={100}
+                            x={cx}
+                            y={Math.max(9, y - 3)}
                             textAnchor="middle"
-                            fill="#64748b"
-                            fontSize="6"
+                            fill="#e2e8f0"
+                            fontSize="9"
                           >
-                            {e.delay}
+                            {pctLabel}
                           </text>
-                        )}
-                      </g>
-                    );
-                  })}
-                </svg>
+                          <text
+                            x={cx}
+                            y={140}
+                            textAnchor="middle"
+                            fill="#94a3b8"
+                            fontSize="9"
+                          >
+                            {e.delay}d
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
               )}
             </div>
 

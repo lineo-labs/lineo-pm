@@ -1,0 +1,87 @@
+---
+title: Monte Carlo Engine
+---
+
+# Monte Carlo Engine
+
+## Overview
+
+The Monte Carlo simulation engine in Lineo-PM is a background service that quantifies delivery risk by running thousands of randomized schedule simulations.
+
+## Algorithm
+
+### Inputs
+
+The simulation receives a project snapshot as input, including:
+
+- All tasks with their baseline durations and risk levels
+- All dependency relations between tasks
+- The target project end date (for slip probability calculation)
+
+### Iteration Loop
+
+The simulation runs `N` iterations (configurable; typically in the range of 1,000–10,000). For each iteration:
+
+**Step 1: Sample task durations**
+
+For each task, a duration is sampled from a probability distribution parameterized by the task's baseline duration and risk level:
+
+| Risk Level | Distribution Shape |
+|---|---|
+| Low | Narrow distribution; samples close to the baseline |
+| Medium | Moderate spread; some probability of significant overrun |
+| High | Wide spread; high probability of meaningful deviation from baseline |
+
+The actual distribution can be triangular, PERT (beta), or log-normal depending on configuration.
+
+**Step 2: Simulate the schedule**
+
+Using the sampled durations and the dependency graph, the engine performs a **forward pass** through the task graph (identical in logic to the Gantt propagation algorithm) to compute the earliest completion date for each task under this iteration's sampled durations.
+
+The project end date is the latest task completion in the simulated schedule (or the latest milestone completion, depending on configuration).
+
+**Step 3: Record results**
+
+For each iteration, the engine records:
+
+- The simulated project end date
+- Whether each task finished before or after its baseline end date (for per-task slip tracking)
+- Which tasks were on the simulated critical path
+
+### Aggregation
+
+After all `N` iterations, the results are aggregated into the final output statistics:
+
+```python
+slip_probability = count(end_date > target_date) / N
+
+p50_delay = percentile(end_dates, 50) - target_date
+p75_delay = percentile(end_dates, 75) - target_date
+p85_delay = percentile(end_dates, 85) - target_date
+p95_delay = percentile(end_dates, 95) - target_date
+
+per_task_slip_risk[task] = count(task_ended_late) / N
+critical_index[task] = count(task_on_critical_path) / N
+
+delay_distribution = histogram(end_dates, bins=N_BINS)
+```
+
+## Storage and Serving
+
+When a simulation completes, results are written to the PostgreSQL database associated with the project/scenario that was simulated. The data model stores:
+
+- Aggregate statistics (slip probability, percentile delays)
+- Per-task risk and critical index values
+- The full delay distribution (as a bucketed histogram)
+
+The backend API exposes these results via the `/simulations` router. The frontend polls for completion and renders the Monte Carlo dashboard when results are available.
+
+## Triggering a Simulation
+
+Simulations are triggered via the `POST /simulations` endpoint. The backend enqueues a Celery task and immediately returns a job ID. The client can then poll `GET /simulations/{job_id}` to check status and retrieve results when ready.
+
+## Performance Considerations
+
+- Simulation time scales roughly linearly with `N` iterations and the number of tasks in the project
+- For typical projects (< 200 tasks, 5,000 iterations), simulation completes in under 5 seconds on a modern CPU
+- Multiple simulations can run concurrently across different projects/scenarios by scaling Celery workers horizontally

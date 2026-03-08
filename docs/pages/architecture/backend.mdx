@@ -1,0 +1,93 @@
+---
+title: Backend Architecture
+---
+
+# Backend Architecture
+
+## Overview
+
+The Lineo-PM backend is a **FastAPI** application built for async-first, high-concurrency operation. It exposes a RESTful JSON API consumed by the frontend, and integrates with Celery for background simulation workloads.
+
+## Directory Structure
+
+```
+backend/src/
+├── __init__.py
+├── celery_app.py          # Celery application and worker configuration
+├── seed.py                # Database seeding utilities
+├── setup.py               # Application setup helpers
+├── db/
+│   ├── database.py        # Async SQLAlchemy engine and session factory
+│   └── models/            # ORM models (SQLAlchemy declarative base)
+├── migrations/
+│   └── versions/          # Alembic migration scripts
+├── routers/
+│   ├── crud.py            # Generic CRUD helpers
+│   ├── project.py         # Project endpoints
+│   ├── tasks.py           # Task endpoints
+│   ├── milestones.py      # Milestone endpoints
+│   ├── scenarios.py       # Scenario endpoints
+│   ├── simulations.py     # Monte Carlo simulation endpoints
+│   ├── relations.py       # Task dependency relation endpoints
+│   └── updates.py         # Narrative update endpoints
+├── schemas/
+│   ├── project.py         # Pydantic schemas for projects
+│   ├── task.py            # Pydantic schemas for tasks
+│   ├── milestone.py       # Pydantic schemas for milestones
+│   ├── scenario.py        # Pydantic schemas for scenarios
+│   ├── relation.py        # Pydantic schemas for relations
+│   └── update.py          # Pydantic schemas for updates
+└── tasks/                 # Celery task definitions
+```
+
+## FastAPI Application
+
+The main application is instantiated in `backend_main.py` (or `main.py` at the root). All routers are registered on the FastAPI app instance, and CORS middleware is configured to allow requests from the frontend origin.
+
+FastAPI's dependency injection is used throughout for database session management: each request receives an async SQLAlchemy session scoped to its lifetime.
+
+## Async SQLAlchemy
+
+All database access uses SQLAlchemy's `asyncio` extension (`AsyncSession`). This keeps the API non-blocking under concurrent load — important when multiple simulation jobs are running and users are interacting with the UI simultaneously.
+
+The session factory is defined in `db/database.py` and injected into router handlers via a FastAPI `Depends` pattern.
+
+## Routers
+
+| Router | Prefix | Responsibility |
+|---|---|---|
+| `project.py` | `/projects` | CRUD for projects |
+| `tasks.py` | `/tasks` | CRUD for tasks, risk level updates |
+| `milestones.py` | `/milestones` | CRUD for milestones |
+| `scenarios.py` | `/scenarios` | Scenario creation, cloning, promotion |
+| `simulations.py` | `/simulations` | Trigger and retrieve Monte Carlo results |
+| `relations.py` | `/relations` | Manage task-to-task dependency links |
+| `updates.py` | `/updates` | Narrative updates on projects/scenarios |
+
+## Pydantic Schemas
+
+Input validation and serialization are handled by Pydantic v2 schemas, colocated with their domain in the `schemas/` directory. Each domain has dedicated `Create`, `Update`, and `Read` schema variants following a consistent naming convention.
+
+## Celery Integration
+
+The `celery_app.py` module configures a Celery application backed by Redis as both broker and result backend. Simulation tasks are defined in `tasks/` and invoked from the `simulations` router via `.delay()`.
+
+Workers are started as separate containers in Docker Compose and share the same codebase via volume mounts.
+
+## Alembic Migrations
+
+Database schema migrations are managed by Alembic. Migration scripts live in `migrations/versions/`. To generate a new migration after modifying ORM models:
+
+```bash
+alembic revision --autogenerate -m "description"
+alembic upgrade head
+```
+
+In the Docker setup, migrations are applied automatically on container startup.
+
+## API Documentation
+
+FastAPI auto-generates interactive API documentation:
+
+- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)

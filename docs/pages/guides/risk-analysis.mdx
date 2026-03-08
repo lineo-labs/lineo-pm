@@ -1,0 +1,91 @@
+---
+title: Risk Analysis
+---
+
+# Guide: Risk Analysis
+
+This guide walks you through assigning risk levels to tasks, running a Monte Carlo simulation, and interpreting the results to make better planning decisions.
+
+## Prerequisites
+
+- A project with tasks defined and dependencies set
+- See [Create a Project](/guides/create-project) for setup
+
+## Step 1: Assign Risk Levels to Tasks
+
+Risk levels tell the simulation engine how much uncertainty to apply to each task's duration.
+
+For each task in your project:
+
+1. Open the task (click on the task bar on the Gantt chart or select it from the task list)
+2. Set the **Risk Level** field:
+   - **Low** — you are highly confident in the estimate; minimal variance
+   - **Medium** — there is moderate uncertainty; the task could run over by a reasonable margin
+   - **High** — the estimate is rough; the actual duration could differ significantly
+3. Save the change
+
+Assign risk levels honestly. The simulation is only as useful as the risk assumptions you put in.
+
+As a starting point:
+- Tasks with strong precedent (done this before, clear scope) → **Low**
+- Tasks with some unknowns or external dependencies → **Medium**
+- Exploratory work, novel integrations, waiting on unclear external inputs → **High**
+
+## Step 2: Run the Monte Carlo Simulation
+
+From the project view, locate the **Monte Carlo** or **Risk Analysis** panel.
+
+Click **Run Simulation**. Lineo-PM will queue the simulation job and process it in the background via the Celery worker.
+
+The simulation typically completes within a few seconds. The results panel will update automatically when the job finishes.
+
+## Step 3: Interpret the Results Dashboard
+
+### Slip Probability
+
+The headline number: the percentage of simulated runs in which the project finishes after the target end date.
+
+- **< 20%** — low delivery risk
+- **20–50%** — moderate risk; consider mitigation
+- **> 50%** — the plan is more likely to slip than not; action is needed
+
+### Percentile Delays
+
+How much delay to expect at different confidence levels:
+
+| Metric | Meaning |
+|---|---|
+| P50 (Typical Delay) | Delay in the median simulation run |
+| P75 | Delay in the 75th percentile run |
+| P85 | Delay in the 85th percentile run |
+| P95 | Delay in the 95th percentile — the "conservative" estimate |
+
+If you need high confidence in on-time delivery, plan to the P85 or P95 date.
+
+### Per-Task Slip Risk
+
+Each task has its own slip probability — how often it finished late across all simulation runs. Tasks with high per-task risk are candidates for:
+
+- Scope reduction
+- Additional resources
+- Earlier start dates
+- Breaking into smaller, more estimable chunks
+
+### Critical Index
+
+How often each task appeared on the critical path across all simulation runs (expressed as a percentage). A task with a critical index of 80% is on the critical path in 80 out of 100 simulated projects.
+
+Focus risk mitigation efforts on tasks with both **high risk level** and **high critical index** — these have the most leverage on overall delivery.
+
+### Delay Distribution
+
+A histogram of simulated project end dates. Use this to communicate the range of outcomes to stakeholders — from the optimistic tail to the pessimistic tail.
+
+## Step 4: Act on the Results
+
+After reviewing the results, consider:
+
+- **Reducing risk** on high-impact tasks (tighter scope, more experienced resource, earlier prototyping)
+- **Adjusting the baseline schedule** to add buffer on high-critical-index chains
+- **Building a risk-adjusted scenario** with more conservative estimates (see [Risk-Adjusted Scenarios](/concepts/risk-adjusted))
+- **Communicating the range** of possible end dates to stakeholders rather than a single date

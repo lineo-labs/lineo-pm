@@ -1,0 +1,78 @@
+---
+title: Create a Project
+---
+
+# Guide: Create a Project
+
+This guide walks you through creating a new project in Lineo-PM from scratch — including milestones, tasks, and their relationships.
+
+## Prerequisites
+
+- Lineo-PM is running locally (see [Installation](/getting-started/installation))
+- The frontend is open at [http://localhost:5173](http://localhost:5173)
+
+## Step 1: Open the Project Panel
+
+On the main screen you will see the **project selector** or the home dashboard. If no projects exist yet, you will see an empty state with a prompt to create one.
+
+## Step 2: Create the Project
+
+Click the **Create Project** button (typically in the top navigation or sidebar).
+
+A form dialog will appear. Fill in the following fields:
+
+| Field | Description |
+|---|---|
+| **Name** | The project name (e.g., "Website Relaunch Q3") |
+| **Start Date** | The planned start date |
+| **End Date** | The target delivery date |
+| **Description** *(optional)* | A short description of the project |
+
+Click **Save** (or **Create**). You will be redirected to the newly created project's Gantt view.
+
+## Step 3: Add Milestones
+
+Milestones represent key delivery points or gates in the project timeline. From the project view:
+
+1. Open the **Milestones** section
+2. Click **Add Milestone**
+3. Enter a name (e.g., "Design Complete", "Beta Release") and a target date
+4. Click **Save**
+
+The milestone will appear as a marker on the Gantt chart.
+
+Repeat for all key dates in the project.
+
+## Step 4: Add Tasks
+
+Tasks are the individual units of work in the schedule. From the Gantt view or the task panel:
+
+1. Click **Add Task**
+2. Fill in:
+   - **Name** — what needs to be done (e.g., "Write API specification")
+   - **Start Date** and **End Date** (or **Duration**)
+   - **Risk Level** — how uncertain the estimate is (Low / Medium / High)
+3. Click **Save**
+
+Add all the tasks that represent your project's scope.
+
+## Step 5: Set Task Dependencies
+
+To define that one task must finish before another can start:
+
+1. Select the predecessor task on the Gantt chart (or in the task list)
+2. Use the **Relations** panel to add a dependency linking it to the successor task
+3. Alternatively, use the drag-to-connect interaction on the Gantt chart by dragging from the right edge of one task bar to the left edge of another
+
+Once dependencies are set, moving any task will cascade updates to its successors automatically.
+
+## Step 6: Review and Confirm
+
+Scroll through the Gantt chart to verify:
+
+- All tasks are placed correctly in time
+- Dependencies appear as connecting lines between tasks
+- Milestones are visible at their target dates
+- The overall schedule fits within the project start and end dates
+
+Your project is now ready for [scenario planning](/guides/scenario-planning) and [risk analysis](/guides/risk-analysis).

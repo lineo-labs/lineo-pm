@@ -1,0 +1,69 @@
+---
+title: Risk-Adjusted Scenarios
+---
+
+# Risk-Adjusted Scenarios
+
+## What Are Risk Levels?
+
+Every task in Lineo-PM has an associated **risk level** — a qualitative or quantitative indicator of how uncertain the task's duration is. A low-risk task is one you are highly confident about; a high-risk task is one where the actual effort could be significantly more (or less) than estimated.
+
+Risk levels are the primary input that feed the [Monte Carlo simulation](/concepts/monte-carlo) engine. They define the width of the probability distribution from which task durations are sampled during each simulation iteration.
+
+import VideoWithBase from "../../components/VideoWithBase";
+
+## How Risk Levels Feed Into Simulations
+
+<VideoWithBase src="/risk-adjusted-demo.webm" autoPlay loop muted playsInline style={{ width: "100%", borderRadius: "8px", marginTop: "1.5rem" }} />
+
+When a simulation runs, each task's duration is not taken as a fixed value. Instead, the engine samples from a **triangular distribution** defined by three parameters derived from the task's risk level: a minimum, a most-likely (baseline), and a maximum duration.
+
+The risk level controls how asymmetric and wide that triangle is — a low-risk task has a narrow, nearly symmetric distribution, while a high-risk task has a wider range skewed toward longer durations.
+
+> **Note:** Per-task risk level variance (low / medium / high) and per-task slip probability will be exposed as direct inputs in a future release. The current model uses the triangular distribution as its sampling mechanism.
+
+## Building Risk-Adjusted Scenarios
+
+A **risk-adjusted scenario** is a scenario in which you have deliberately modeled a pessimistic or conservative risk profile. This is useful for:
+
+- **Stress-testing your plan** — "What does delivery look like if every high-risk task runs long?"
+- **Stakeholder communication** — presenting a range of outcomes with explicit assumptions
+- **Contingency planning** — identifying the worst-case delivery date before it becomes a surprise
+
+To build a risk-adjusted scenario:
+
+1. Select pessimistic risk level (P80, P90, or P99) in dropdown named "Create risk-adjusted scenario"
+2. Lineo creates a new scenario with the same tasks and dependencies as the baseline, but with risk levels adjusted to reflect the selected confidence level
+
+## Interpreting the Risk-Adjusted Results
+
+After the engine runs, a results panel shows two tabs: **Task Shifts** and **Original Monte Carlo**.
+
+### Task Shifts
+
+The Task Shifts table shows exactly what the engine did to each task and why:
+
+| Column | Meaning |
+|---|---|
+| **Task** | Task name |
+| **Orig dates** | Baseline start → end dates |
+| **New dates** | Adjusted start → end dates in the risk scenario |
+| **Buffer** | Calendar days of buffer added to this task's duration |
+| **CI** | Critical Index — how often this task appeared on the critical path across all simulation runs (higher = more dangerous) |
+| **σ** | Duration uncertainty in days (standard deviation of the triangular sample distribution) |
+| **End Δ** | How many days later the task ends compared to the baseline |
+| **Reason** | Plain-language explanation of why (or why not) a buffer was applied |
+
+Tasks with no schedule shift are shown at reduced opacity — they were evaluated but did not require adjustment.
+
+### Original Monte Carlo
+
+The second tab shows the Monte Carlo analysis that was run on the **original baseline** before any risk adjustment. This gives you the full picture: slip probability, delay distribution histogram, percentiles (P50/P75/P90/P99), and the critical index ranking for each task.
+
+When you compare a risk-adjusted scenario to the baseline, focus on:
+
+- **How slip probability changes** — does the adjusted risk profile push you above an acceptable threshold?
+- **Which tasks now carry the highest per-task risk** — these are your candidates for mitigation
+- **Critical index shifts** — do different tasks become structurally critical under the higher-risk assumptions?
+
+Risk-adjusted scenarios give you the information you need to decide whether to add resources, cut scope, or adjust the schedule before uncertainty materializes into delay.
