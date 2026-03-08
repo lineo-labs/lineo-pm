@@ -1,6 +1,6 @@
 export default {
   "decision-engine": "Decision Engine",
-  scenarions: "Scenarios",
+  scenarios: "Scenarios",
   "monte-carlo": "Monte Carlo Simulation",
   "risk-adjusted": "Risk-Adjusted Scenarios",
   milestones: "Milestones",
