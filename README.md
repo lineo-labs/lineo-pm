@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" />
+  <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="Apache 2.0 License" />
   <img src="https://img.shields.io/badge/stack-FastAPI%20%7C%20React%20%7C%20PostgreSQL-informational" alt="Stack" />
 </p>
 
@@ -143,4 +143,4 @@ Contributions are welcome. Please read the [contributing guide](https://lineo-la
 
 ## License
 
-Apache License 2.0
+Licensed under the [Apache License 2.0](LICENSE).
