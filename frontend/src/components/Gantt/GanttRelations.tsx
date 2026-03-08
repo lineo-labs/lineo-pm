@@ -122,9 +122,6 @@ export const GanttRelations = ({ tasks, positions, rowHeight, visible = true }: 
 
           const compId = compIdByNode.get(taskId) ?? -1;
           const isHighlighted = hoveredLockKeys ? hoveredLockKeys.has(k) : false;
-          // brighter, more saturated highlight colors for better visibility
-          const fill = isHighlighted ? "#60A5FA" : "#E5E7EB"; // blue-400 when highlighted
-          const stroke = isHighlighted ? "#0369A1" : "#4B5563"; // darker blue stroke when highlighted
 
           const x = posLabel === "start" ? pos.offset : pos.offset + pos.width;
           const key = `lock-${taskId}-${posLabel}`;
@@ -198,24 +195,24 @@ export const GanttRelations = ({ tasks, positions, rowHeight, visible = true }: 
               aria-hidden={false}
               style={{ cursor: "pointer", pointerEvents: "all" }}
             >
-                {/* invisible larger hit area to make hovering easier */}
-                <rect x={-10} y={-10} width={20} height={20} fill="transparent" style={{ pointerEvents: "all" }} />
-                {isHighlighted && (
-                  <rect
-                    x={-8}
-                    y={-6}
-                    width={16}
-                    height={12}
-                    rx={3}
-                    fill="none"
-                    stroke="#FBBF24"
-                    strokeWidth={2}
-                    opacity={0.95}
-                  />
-                )}
-                <rect x={-6} y={-4} width={12} height={8} rx={2} ry={2} fill={fill} stroke={stroke} strokeWidth={1} />
-              <path d={`M -4 -3 A 4 4 0 0 1 4 -3`} fill="none" stroke={stroke} strokeWidth={1.25} />
-              <rect x={-1} y={-1} width={2} height={2} fill={stroke} />
+                {/* hit area */}
+              <rect x={-10} y={-10} width={20} height={20} fill="transparent" style={{ pointerEvents: "all" }} />
+              {/* outer ring — only on hover */}
+              <circle
+                r={isHighlighted ? 8 : 0}
+                fill="none"
+                stroke="#F59E0B"
+                strokeWidth={1.5}
+                opacity={isHighlighted ? 0.85 : 0}
+                style={{ transition: "r 120ms ease, opacity 120ms ease" }}
+              />
+              {/* dot */}
+              <circle
+                r={isHighlighted ? 5 : 3}
+                fill={isHighlighted ? "#FBBF24" : "#818CF8"}
+                opacity={isHighlighted ? 1 : 0.85}
+                style={{ transition: "r 120ms ease, fill 120ms ease, opacity 120ms ease" }}
+              />
             </g>
           );
         })}

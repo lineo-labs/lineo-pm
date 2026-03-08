@@ -39,8 +39,8 @@ export const GanttBar = ({
     <div
       className={
         variant === "base"
-          ? `absolute top-0 h-7 rounded-full border-2 border-dashed border-amber-400/60 bg-amber-500/10 pointer-events-none`
-          : `absolute top-2 flex h-7 touch-none select-none items-center justify-between gap-2 rounded-full bg-indigo-600 px-2 text-xs font-medium text-white shadow-sm shadow-indigo-500/30 ${
+          ? `absolute top-0 h-7 rounded border-2 border-dashed border-amber-400/60 bg-amber-500/10 pointer-events-none`
+          : `absolute top-2 flex h-7 touch-none select-none items-center justify-center overflow-hidden rounded bg-indigo-600 text-xs font-medium text-white shadow-sm shadow-indigo-500/30 ${
               isDragging ? "cursor-ew-resize" : isRowDragging ? "cursor-grabbing" : "cursor-grab"
             } ${isRowDragging ? "opacity-80" : ""}`
       }
@@ -84,8 +84,9 @@ export const GanttBar = ({
             )}
       {interactive ? (
         <>
+          {/* Left resize edge — invisible, lights up on hover */}
           <div
-            className="h-4 w-2 cursor-ew-resize rounded-full bg-white/60"
+            className="absolute left-0 top-0 h-full w-3 cursor-ew-resize transition-colors hover:bg-white/25"
             onPointerDown={(event) => {
               event.stopPropagation();
               onResizeStartPointerDown(event);
@@ -94,9 +95,10 @@ export const GanttBar = ({
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerCancel}
           />
-          <div className="truncate leading-7">{title}</div>
+          <div className="truncate px-3 leading-7">{title}</div>
+          {/* Right resize edge — invisible, lights up on hover */}
           <div
-            className="h-4 w-2 cursor-ew-resize rounded-full bg-white/60"
+            className="absolute right-0 top-0 h-full w-3 cursor-ew-resize transition-colors hover:bg-white/25"
             onPointerDown={(event) => {
               event.stopPropagation();
               onResizeEndPointerDown(event);
