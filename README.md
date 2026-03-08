@@ -6,17 +6,6 @@
 
 <h1 align="center">Open Source Decision-Driven Planning Engine</h1>
 
-<p align="center">
-  <a href="https://lineo-labs.github.io/lineo-pm/getting-started/installation">Getting Started</a> ·
-  <a href="https://lineo-labs.github.io/lineo-pm/concepts/decision-engine">Concepts</a> ·
-  <a href="https://lineo-labs.github.io/lineo-pm/api-reference/backend">API Reference</a>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="Apache 2.0 License" />
-  <img src="https://img.shields.io/badge/stack-FastAPI%20%7C%20React%20%7C%20PostgreSQL-informational" alt="Stack" />
-</p>
-
 ![Demo](docs/demo-preview.gif)
 
 </div>
